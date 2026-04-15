@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Inter } from "next/font/google";
 import Navbar from "@/components/Navbar";
+import { AuthProvider } from "@/lib/auth/AuthProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -43,8 +44,10 @@ export default function RootLayout({
       style={{ colorScheme: "dark" }}
     >
       <body className="min-h-screen bg-[var(--color-brand-bg-1)] text-white overflow-x-hidden antialiased">
-        <Navbar />
-        {children}
+        <AuthProvider>
+          <Navbar />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

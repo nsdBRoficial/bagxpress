@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Wallet, Menu, X } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
+import AuthButton from "@/components/AuthButton";
 
 export default function Navbar() {
   const { scrollY } = useScroll();
@@ -58,9 +59,15 @@ export default function Navbar() {
                 </Link>
               ))}
             </div>
-            <button className="px-5 py-2.5 rounded-full bg-white/5 border border-white/10 text-white font-medium text-sm hover:bg-white/10 transition-colors">
+            <a
+              href="https://github.com/nsdBRoficial/bagxpress"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-5 py-2.5 rounded-full bg-white/5 border border-white/10 text-white font-medium text-sm hover:bg-white/10 transition-colors"
+            >
               GitHub
-            </button>
+            </a>
+            <AuthButton />
             <Link href="/demo" className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[var(--color-brand-primary)] to-[var(--color-brand-secondary)] text-white font-semibold text-sm shadow-[0_0_15px_rgba(124,58,237,0.3)] hover:shadow-[0_0_25px_rgba(124,58,237,0.5)] transition-all flex items-center">
               Launch Demo
             </Link>
@@ -94,9 +101,17 @@ export default function Navbar() {
             </Link>
           ))}
           <div className="flex flex-col gap-4 mt-8 w-full max-w-xs">
-            <button className="w-full py-3 rounded-full bg-white/5 border border-white/10 text-white font-medium">
+            <div className="flex justify-center">
+              <AuthButton />
+            </div>
+            <a
+              href="https://github.com/nsdBRoficial/bagxpress"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-3 rounded-full bg-white/5 border border-white/10 text-center text-white font-medium"
+            >
               GitHub
-            </button>
+            </a>
             <Link href="/demo" className="w-full py-3 rounded-full bg-gradient-to-r from-[var(--color-brand-primary)] to-[var(--color-brand-secondary)] text-center text-white font-semibold shadow-[0_0_15px_rgba(124,58,237,0.4)]">
               Launch Demo
             </Link>

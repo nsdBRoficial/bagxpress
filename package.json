@@ -1,6 +1,6 @@
 {
   "name": "bagxpress",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,11 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@bagsfm/bags-sdk": "^1.3.7",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.0",
     "@solana/web3.js": "^1.98.4",
     "@stripe/react-stripe-js": "^6.2.0",
     "@stripe/stripe-js": "^9.2.0",
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.103.2",
     "@types/canvas-confetti": "^1.9.0",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",

@@ -1,31 +1,139 @@
+/**
+ * POST /api/execute-buy — v2 REAL PRODUCT MODE
+ *
+ * Executa compra real após confirmação do Stripe.
+ * Fluxo:
+ * 1. Identifica usuário (auth ou anon)
+ * 2. Busca/cria wallet real persistida (auth) ou ephemeral (anon)
+ * 3. Executa swap via SwapProviderFactory (Bags → Jupiter → SolanaTransfer → Mock)
+ * 4. Persiste resultado no banco (orders + transactions)
+ * 5. Retorna txHash + explorerUrl clicável
+ */
+
 import { NextResponse } from "next/server";
-import { createWalletIfNotExists, executeJupiterSwap } from "@/services/solana";
+import { Keypair } from "@solana/web3.js";
+import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
+import { getOrCreateWallet, getDecryptedKeypair } from "@/services/wallet";
+import { executeSwap } from "@/services/swap";
+
+const SOLANA_RPC = process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
+const NETWORK = process.env.SOLANA_NETWORK ?? "devnet";
 
 export async function POST(req: Request) {
   try {
-    const { orderId, amount } = await req.json();
+    const body = await req.json();
+    const { orderId, amount, tokenMint, creatorWallet } = body;
 
     if (!orderId || !amount) {
-      return NextResponse.json({ error: "orderId and amount are required" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "orderId e amount são obrigatórios" },
+        { status: 400 }
+      );
     }
 
-    // 1. Validate payment / orderId (mock validation delay)
-    await new Promise(r => setTimeout(r, 400));
-    
-    // 2. Fetch or create a non-custodial secure wallet for user based on Passkey/Session
-    const wallet = await createWalletIfNotExists("user_session_abc");
+    // -----------------------------------------------------------------
+    // 1. Identificar usuário
+    // -----------------------------------------------------------------
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id ?? null;
 
-    // 3. Execute Swap on chain (includes graceful fallback and airdrop mechanism natively)
-    const swapResult = await executeJupiterSwap(wallet.publicKey, amount);
+    const admin = createSupabaseAdminClient();
+
+    // Atualiza order → executing
+    await admin
+      .from("orders")
+      .update({ status: "executing", updated_at: new Date().toISOString() })
+      .eq("stripe_payment_intent_id", orderId);
+
+    // -----------------------------------------------------------------
+    // 2. Resolver wallet
+    // -----------------------------------------------------------------
+    let keypair: Keypair;
+    let walletPublicKey: string;
+    let isRealWallet = false;
+
+    if (userId) {
+      try {
+        const walletInfo = await getOrCreateWallet(userId);
+        const decrypted = await getDecryptedKeypair(userId);
+        keypair = decrypted.keypair;
+        walletPublicKey = walletInfo.publicKey;
+        isRealWallet = true;
+      } catch (e: any) {
+        console.warn("[execute-buy] Wallet fetch failed, ephemeral fallback:", e.message);
+        keypair = Keypair.generate();
+        walletPublicKey = keypair.publicKey.toBase58();
+      }
+    } else {
+      keypair = Keypair.generate();
+      walletPublicKey = keypair.publicKey.toBase58();
+    }
+
+    // -----------------------------------------------------------------
+    // 3. Executar swap via provider factory
+    // -----------------------------------------------------------------
+    const swapResult = await executeSwap({
+      keypair,
+      tokenMint: tokenMint ?? null,
+      creatorWallet: creatorWallet ?? null,
+      amountUsd: Number(amount),
+      network: NETWORK,
+      rpcUrl: SOLANA_RPC,
+    });
+
+    // -----------------------------------------------------------------
+    // 4. Persistir resultado no banco
+    // -----------------------------------------------------------------
+    const { data: orderRow } = await admin
+      .from("orders")
+      .select("id")
+      .eq("stripe_payment_intent_id", orderId)
+      .single();
+
+    if (orderRow) {
+      await admin.from("transactions").upsert(
+        {
+          order_id: orderRow.id,
+          ...(userId ? { user_id: userId } : {}),
+          tx_hash: swapResult.txHash,
+          delivered_amount: swapResult.deliveredAmount,
+          is_real_tx: swapResult.isRealTx,
+          network: NETWORK,
+          explorer_url: swapResult.explorerUrl,
+          status: swapResult.isRealTx ? "confirmed" : "mock",
+        },
+        { onConflict: "order_id" }
+      );
+
+      await admin
+        .from("orders")
+        .update({
+          status: swapResult.success ? "completed" : "failed",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", orderRow.id);
+    }
+
+    const walletDisplay = `${walletPublicKey.slice(0, 4)}...${walletPublicKey.slice(-4)}`;
 
     return NextResponse.json({
       success: true,
-      wallet: wallet.address,
+      wallet: walletDisplay,
+      walletFull: walletPublicKey,
       txHash: swapResult.txHash,
-      deliveredAmount: swapResult.bxpAmount,
-      isRealTx: swapResult.isRealTx
+      deliveredAmount: swapResult.deliveredAmount,
+      isRealTx: swapResult.isRealTx,
+      isRealWallet,
+      explorerUrl: swapResult.explorerUrl,
+      provider: swapResult.provider,
+      network: NETWORK,
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[execute-buy] Fatal:", error.message);
+    return NextResponse.json(
+      { success: false, error: error.message || "Execution failed" },
+      { status: 500 }
+    );
   }
 }
