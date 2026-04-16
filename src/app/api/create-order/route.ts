@@ -14,7 +14,8 @@ import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/sup
 
 const stripeApiKey = process.env.STRIPE_SECRET_KEY || "";
 const stripe = stripeApiKey.startsWith("sk_")
-  ? new Stripe(stripeApiKey, { apiVersion: "2024-06-20" as any })
+  // @ts-expect-error - Mismatch version typing is allowed
+  ? new Stripe(stripeApiKey, { apiVersion: "2024-06-20" })
   : null;
 
 export async function POST(req: Request) {
@@ -58,8 +59,9 @@ export async function POST(req: Request) {
         });
         stripePaymentIntentId = paymentIntent.id;
         clientSecret = paymentIntent.client_secret ?? "mock_secret_123";
-      } catch (e: any) {
-        console.warn("[create-order] Stripe fallback:", e.message);
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        console.warn("[create-order] Stripe fallback:", message);
       }
     }
 
@@ -91,8 +93,9 @@ export async function POST(req: Request) {
       clientSecret,
       status: "created",
     });
-  } catch (error: any) {
-    console.error("[create-order] Unexpected error:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[create-order] Unexpected error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

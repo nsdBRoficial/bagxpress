@@ -30,10 +30,7 @@ import {
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 
-// Token-2022 program ID
-const TOKEN_2022_PROGRAM_ID = new PublicKey(
-  "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
-);
+// Token-2022 constants loaded dynamically from @solana/spl-token
 
 const RPC_URL =
   process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com";

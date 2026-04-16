@@ -60,8 +60,9 @@ export async function POST(req: Request) {
         keypair = decrypted.keypair;
         walletPublicKey = walletInfo.publicKey;
         isRealWallet = true;
-      } catch (e: any) {
-        console.warn("[execute-buy] Wallet fetch failed, ephemeral fallback:", e.message);
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        console.warn("[execute-buy] Wallet fetch failed, ephemeral fallback:", message);
         keypair = Keypair.generate();
         walletPublicKey = keypair.publicKey.toBase58();
       }
@@ -129,10 +130,11 @@ export async function POST(req: Request) {
       provider: swapResult.provider,
       network: NETWORK,
     });
-  } catch (error: any) {
-    console.error("[execute-buy] Fatal:", error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[execute-buy] Fatal:", message);
     return NextResponse.json(
-      { success: false, error: error.message || "Execution failed" },
+      { success: false, error: message || "Execution failed" },
       { status: 500 }
     );
   }

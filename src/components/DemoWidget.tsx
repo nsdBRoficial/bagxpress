@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { Terminal, Check, Loader2, ArrowRight } from "lucide-react";
+import { Terminal, Check, Loader2 } from "lucide-react";
 import clsx from "clsx";
 
 export default function DemoWidget() {

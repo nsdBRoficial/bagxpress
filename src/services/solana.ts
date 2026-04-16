@@ -1,4 +1,4 @@
-import { Connection, Keypair, LAMPORTS_PER_SOL, clusterApiUrl } from '@solana/web3.js';
+import { Connection, Keypair, LAMPORTS_PER_SOL, clusterApiUrl, PublicKey } from '@solana/web3.js';
 
 const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
 
@@ -12,7 +12,7 @@ export async function createWalletIfNotExists(userId: string) {
   };
 }
 
-export async function executeJupiterSwap(publicKey: any, fiatAmount: number) {
+export async function executeJupiterSwap(publicKey: PublicKey, fiatAmount: number) {
   // Mock conversion rate
   const bxpAmount = fiatAmount * 1.5; 
 
@@ -40,8 +40,9 @@ export async function executeJupiterSwap(publicKey: any, fiatAmount: number) {
       txHash: signature,
       bxpAmount
     };
-  } catch (err: any) {
-    console.warn("Solana Devnet Exception. Triggering Graceful Mock Fallback.", err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn("Solana Devnet Exception. Triggering Graceful Mock Fallback.", message);
     
     // Seamless Mock Fallback mechanism exactly as before, guaranteeing demo stability
     await new Promise(r => setTimeout(r, 1200));

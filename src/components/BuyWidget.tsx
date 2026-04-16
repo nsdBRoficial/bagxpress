@@ -128,8 +128,9 @@ function CheckoutForm({
       }
 
       onSuccess(data);
-    } catch (e: any) {
-      onError(e.message || "Execution failed");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      onError(message || "Execution failed");
     }
   };
 
@@ -285,9 +286,10 @@ export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
       setOrderId(orderData.orderId);
       setClientSecret(orderData.clientSecret);
       setState("collecting_payment");
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
       setState("error");
-      addLog(error.message || "An unexpected error occurred", "error");
+      addLog(message || "An unexpected error occurred", "error");
     }
   };
 

@@ -94,14 +94,7 @@ function getBagsApiKey(): string | null {
   return key;
 }
 
-function makeHeaders(): HeadersInit {
-  const key = getBagsApiKey();
-  if (!key) throw new Error("BAGS_API_KEY not configured");
-  return {
-    "x-api-key": key,
-    "Content-Type": "application/json",
-  };
-}
+
 
 function normalizeCreator(raw: BagsTokenCreator): BagsCreatorProfile {
   const displayName =

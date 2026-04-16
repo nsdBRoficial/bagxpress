@@ -1,8 +1,8 @@
 "use client";
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Float, Points, PointMaterial, Sparkles, Stars } from "@react-three/drei";
-import { useRef, useMemo } from "react";
+import { Float, Sparkles, Stars } from "@react-three/drei";
+import { useRef, useMemo, useEffect, useState } from "react";
 import * as THREE from "three";
 
 function RotatingToken() {
@@ -79,7 +79,9 @@ function HolographicCard() {
 }
 
 function ConnectionsLines() {
-  const points = useMemo(() => {
+  const [points, setPoints] = useState<THREE.Vector3[]>([]);
+
+  useEffect(() => {
     const pts = [];
     for (let i = 0; i < 20; i++) {
       pts.push(
@@ -90,8 +92,10 @@ function ConnectionsLines() {
         )
       );
     }
-    return pts;
+    setPoints(pts);
   }, []);
+
+  if (points.length === 0) return null;
 
   const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
 

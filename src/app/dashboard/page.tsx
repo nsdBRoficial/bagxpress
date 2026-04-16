@@ -128,8 +128,9 @@ export default function DashboardPage() {
         const json = await res.json();
         if (json.success) setWallet(json.wallet);
         else setWalletError(json.error);
-      } catch (e: any) {
-        setWalletError(e.message);
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        setWalletError(message);
       } finally {
         setLoadingWallet(false);
       }

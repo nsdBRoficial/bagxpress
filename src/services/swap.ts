@@ -21,6 +21,9 @@ import {
   sendAndConfirmTransaction,
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
+import { FLAGS } from "@/lib/flags";
+import { executeContractBuy, NodeWallet as Wallet } from "./contract";
+import { executeSponsoredProofTx } from "./relayer";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -163,7 +166,8 @@ class BagsSwapProvider implements SwapProvider {
         isRealTx: true,
         provider: this.name,
       };
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
       return {
         success: false,
         txHash: null,
@@ -171,7 +175,7 @@ class BagsSwapProvider implements SwapProvider {
         deliveredAmount,
         isRealTx: false,
         provider: this.name,
-        error: e.message,
+        error: message,
       };
     }
   }
@@ -233,7 +237,8 @@ class JupiterSwapProvider implements SwapProvider {
         isRealTx: true,
         provider: this.name,
       };
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
       return {
         success: false,
         txHash: null,
@@ -241,7 +246,7 @@ class JupiterSwapProvider implements SwapProvider {
         deliveredAmount,
         isRealTx: false,
         provider: this.name,
-        error: e.message,
+        error: message,
       };
     }
   }
@@ -295,7 +300,8 @@ class SolanaTransferProvider implements SwapProvider {
         isRealTx: true,
         provider: this.name,
       };
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
       return {
         success: false,
         txHash: null,
@@ -303,7 +309,7 @@ class SolanaTransferProvider implements SwapProvider {
         deliveredAmount,
         isRealTx: false,
         provider: this.name,
-        error: e.message,
+        error: message,
       };
     }
   }
@@ -339,7 +345,99 @@ class MockSwapProvider implements SwapProvider {
 // Factory: escolhe o melhor provider disponível
 // ---------------------------------------------------------------------------
 
+class AnchorSwapProvider implements SwapProvider {
+  name = "anchor_smart_contract";
+
+  canExecute(params: SwapParams): boolean {
+    return FLAGS.ANCHOR_CONTRACTS && !!params.tokenMint && !!params.creatorWallet;
+  }
+
+  async execute(params: SwapParams): Promise<SwapResult> {
+    const { keypair, rpcUrl, network, tokenMint, creatorWallet, amountUsd } = params;
+    const deliveredAmount = Math.floor(amountUsd * 100);
+
+    try {
+      const connection = new Connection(rpcUrl, "confirmed");
+      const wallet = new Wallet(keypair);
+
+      const txHash = await executeContractBuy(
+        connection,
+        wallet,
+        keypair.publicKey,
+        new PublicKey(creatorWallet!),
+        Math.floor(amountUsd * 1e6), // amount_lamports simulado
+        250, // royalty de 2.5% default mock
+        new PublicKey(tokenMint!)
+      );
+
+      if (!txHash) throw new Error("Anchor contract bypass ou falha na emissão");
+
+      return {
+        success: true,
+        txHash,
+        explorerUrl: explorerUrl(txHash, network),
+        deliveredAmount,
+        isRealTx: true,
+        provider: this.name,
+      };
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      return {
+        success: false,
+        txHash: null,
+        explorerUrl: null,
+        deliveredAmount,
+        isRealTx: false,
+        provider: this.name,
+        error: message,
+      };
+    }
+  }
+}
+
+class GaslessSponsoredProvider implements SwapProvider {
+  name = "gasless_relayer";
+
+  canExecute(): boolean {
+    return FLAGS.GASLESS_ENGINE;
+  }
+
+  async execute(params: SwapParams): Promise<SwapResult> {
+    const { keypair, rpcUrl, network, amountUsd } = params;
+    const deliveredAmount = Math.floor(amountUsd * 100);
+
+    const relayerResult = await executeSponsoredProofTx(
+      keypair.publicKey.toBase58(),
+      rpcUrl,
+      network
+    );
+
+    if (relayerResult.success && relayerResult.txHash) {
+      return {
+        success: true,
+        txHash: relayerResult.txHash,
+        explorerUrl: relayerResult.explorerUrl,
+        deliveredAmount,
+        isRealTx: true,
+        provider: this.name,
+      };
+    }
+
+    return {
+      success: false,
+      txHash: null,
+      explorerUrl: null,
+      deliveredAmount,
+      isRealTx: false,
+      provider: this.name,
+      error: relayerResult.error || "Gasless relayer falhou sem erro explícito",
+    };
+  }
+}
+
 const PROVIDERS: SwapProvider[] = [
+  new AnchorSwapProvider(),
+  new GaslessSponsoredProvider(),
   new BagsSwapProvider(),
   new JupiterSwapProvider(),
   new SolanaTransferProvider(),

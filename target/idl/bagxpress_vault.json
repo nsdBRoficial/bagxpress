@@ -1,0 +1,223 @@
+{
+  "version": "0.1.0",
+  "name": "bagxpress_vault",
+  "instructions": [
+    {
+      "name": "initializeVault",
+      "accounts": [
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "vaultState",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "bump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "processBuy",
+      "accounts": [
+        {
+          "name": "buyer",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "creator",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultState",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amountLamports",
+          "type": "u64"
+        },
+        {
+          "name": "royaltyBps",
+          "type": "u16"
+        },
+        {
+          "name": "tokenMint",
+          "type": "publicKey"
+        }
+      ]
+    },
+    {
+      "name": "sweepAndBurn",
+      "accounts": [
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "creator",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultState",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "burnProtocolFee",
+          "type": "bool"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "VaultState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "totalBuys",
+            "type": "u64"
+          },
+          {
+            "name": "totalRoyaltyLamports",
+            "type": "u64"
+          },
+          {
+            "name": "lastUpdated",
+            "type": "i64"
+          }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "BuyExecuted",
+      "fields": [
+        {
+          "name": "buyer",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "creator",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "amountLamports",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "royaltyLamports",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "tokenMint",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "timestamp",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "SweepExecuted",
+      "fields": [
+        {
+          "name": "creator",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "amount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "burnedProtocolFee",
+          "type": "bool",
+          "index": false
+        },
+        {
+          "name": "timestamp",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Unauthorized",
+      "msg": "A operação não está autorizada para este usuário."
+    },
+    {
+      "code": 6001,
+      "name": "MathOverflow",
+      "msg": "O cálculo de royalty resultou em overflow matemático."
+    },
+    {
+      "code": 6002,
+      "name": "InvalidTokenAccount",
+      "msg": "A conta de token fornecida é inválida."
+    },
+    {
+      "code": 6003,
+      "name": "InvalidTransferFee",
+      "msg": "A taxa de transferência (TransferFee) não confere com o esperado."
+    }
+  ],
+  "metadata": {
+    "address": "BXPvau1tGodStackXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  }
+}

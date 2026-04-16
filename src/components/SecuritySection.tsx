@@ -47,7 +47,7 @@ export default function SecuritySection() {
             transition={{ delay: 0.1 }}
             className="text-xl text-[var(--color-text-secondary)] max-w-2xl mx-auto"
           >
-            ZeroUX doesn't mean zero security. In fact, it's safer than traditional Web3 onboarding.
+            ZeroUX doesn&apos;t mean zero security. In fact, it&apos;s safer than traditional Web3 onboarding.
           </motion.p>
         </div>
 

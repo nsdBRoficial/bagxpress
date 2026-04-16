@@ -148,7 +148,6 @@ export async function getOrCreateCompressedAccount(
           lamports: Number(account.lamports),
           isCompressed: true,
           // O SDK Light Protocol usa diferentes campos dependendo da versão
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           treeAddress: ((account as unknown as Record<string, unknown>).merkleTree as PublicKey | undefined)?.toBase58()
             ?? ((account as unknown as Record<string, unknown>).tree as PublicKey | undefined)?.toBase58(),
         };

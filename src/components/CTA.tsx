@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Code2 as Github, Play, ExternalLink } from "lucide-react";
+import { Code2 as Github, Play, ExternalLink } from "lucide-react";
 import Link from "next/link";
 
 export default function CTA() {
