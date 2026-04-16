@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@bagsfm/bags-sdk": "^1.3.7",
+    "@lightprotocol/compressed-token": "^0.23.3",
+    "@lightprotocol/stateless.js": "^0.23.3",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.0",
     "@solana/web3.js": "^1.98.4",

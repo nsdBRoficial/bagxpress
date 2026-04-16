@@ -50,6 +50,10 @@ create table if not exists public.wallets (
   encrypted_private_key text not null,  -- AES-256-GCM base64
   encryption_iv         text not null,  -- IV base64
   network               text default 'devnet',
+  -- God Stack: ZK Compression
+  is_compressed         boolean default false,   -- true se conta usa Light Protocol
+  compressed_account_hash text,                 -- hash da conta no Merkle tree
+  tree_address          text,                   -- state tree do Light Protocol
   created_at            timestamptz default now()
 );
 
@@ -122,3 +126,66 @@ create index if not exists idx_orders_user_id on public.orders(user_id);
 create index if not exists idx_orders_stripe_pi on public.orders(stripe_payment_intent_id);
 create index if not exists idx_transactions_order_id on public.transactions(order_id);
 create index if not exists idx_transactions_user_id on public.transactions(user_id);
+
+
+-- =============================================================================
+-- GOD STACK — Tabelas adicionais
+-- =============================================================================
+
+-- 6. COMPRESSED_ACCOUNTS — Registro de contas ZK comprimidas (Light Protocol)
+-- Complementa a tabela wallets para usuários com contas comprimidas.
+create table if not exists public.compressed_accounts (
+  id              uuid default gen_random_uuid() primary key,
+  user_id         uuid references public.profiles(id) on delete cascade not null,
+  public_key      text not null,                -- owner da conta comprimida
+  account_hash    text,                         -- hash no Merkle tree
+  tree_address    text,                         -- state tree do Light Protocol
+  token_mint      text,                         -- mint associado (ex: BXP)
+  lamports        bigint default 0,
+  token_amount    bigint default 0,             -- amount em unidades base
+  network         text default 'devnet',
+  last_synced_at  timestamptz default now(),
+  created_at      timestamptz default now()
+);
+
+-- RLS: usuário só vê suas próprias contas comprimidas
+alter table public.compressed_accounts enable row level security;
+
+create policy "compressed_accounts: user can read own" on public.compressed_accounts
+  for select using (auth.uid() = user_id);
+
+-- INSERT/UPDATE só pelo service role
+create policy "compressed_accounts: service role only" on public.compressed_accounts
+  for all using (false);
+
+-- Índices para lookup eficiente
+create index if not exists idx_compressed_accounts_user_id
+  on public.compressed_accounts(user_id);
+create index if not exists idx_compressed_accounts_public_key
+  on public.compressed_accounts(public_key);
+create index if not exists idx_compressed_accounts_token_mint
+  on public.compressed_accounts(token_mint);
+
+
+-- 7. RELAYER_LOGS — Registro de transações patrocinadas (Gasless Engine)
+create table if not exists public.relayer_logs (
+  id              uuid default gen_random_uuid() primary key,
+  user_id         uuid references public.profiles(id) on delete set null,
+  user_signer     text not null,                -- public key do usuário
+  fee_payer       text,                         -- public key do fee payer
+  fee_sponsored   bigint,                       -- lamports cobertos
+  tx_hash         text,
+  event_type      text not null,                -- fee_sponsored | fallback_self_pay | error
+  network         text default 'devnet',
+  error_message   text,
+  created_at      timestamptz default now()
+);
+
+-- RLS: apenas service role acessa (dados sensíveis do relayer)
+alter table public.relayer_logs enable row level security;
+
+create policy "relayer_logs: service role only" on public.relayer_logs
+  for all using (false);
+
+create index if not exists idx_relayer_logs_user_id on public.relayer_logs(user_id);
+create index if not exists idx_relayer_logs_tx_hash on public.relayer_logs(tx_hash);
