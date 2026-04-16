@@ -2,7 +2,13 @@ import { Connection, Keypair, LAMPORTS_PER_SOL, clusterApiUrl, PublicKey } from 
 
 const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
 
-export async function createWalletIfNotExists(userId: string) {
+export async function getBalance(publicKeyBase58: string): Promise<number> {
+  const pubKey = new PublicKey(publicKeyBase58);
+  const balance = await connection.getBalance(pubKey);
+  return balance / LAMPORTS_PER_SOL;
+}
+
+export async function createWalletIfNotExists() {
   // Generate a legitimate ephemeral Keypair for this session
   const keypair = Keypair.generate();
   return { 

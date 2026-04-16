@@ -49,6 +49,13 @@ interface TxDetails {
   explorerUrl?: string | null;
   provider?: string;
   network?: string;
+  sweep?: {
+    feeInfo: { totalFeeUsd: number; treasuryFeeUsd: number; buybackFeeUsd: number };
+    buybackTx: string | null;
+    burnTx: string | null;
+    bxpBurned: number;
+  };
+  tokenSymbol?: string;
 }
 
 interface LogEntry {
@@ -125,6 +132,10 @@ function CheckoutForm({
         addLog(`✅ TX confirmed on-chain!`, "success", data.explorerUrl);
       } else {
         addLog(`Transaction processed (simulated).`, "success");
+      }
+
+      if (data.sweep) {
+        addLog(`🔥 Protocol bought & burned ${data.sweep.bxpBurned.toFixed(2)} $BXP via fees.`, "info", data.sweep.burnTx ? `https://explorer.solana.com/tx/${data.sweep.burnTx}?cluster=devnet` : undefined);
       }
 
       onSuccess(data);
@@ -604,7 +615,7 @@ export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
                 className="text-center mb-6"
               >
                 <h3 className="text-3xl font-bold text-white mb-1">
-                  {txDetails.deliveredAmount} $BXP
+                  {txDetails.deliveredAmount} {txDetails.tokenSymbol ?? "$BXP"}
                 </h3>
                 <p className="text-green-400 font-medium">
                   {txDetails.isRealTx ? "Confirmed on-chain! 🎉" : "Payment successful!"}

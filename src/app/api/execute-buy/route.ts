@@ -15,6 +15,7 @@ import { Keypair } from "@solana/web3.js";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { getOrCreateWallet, getDecryptedKeypair } from "@/services/wallet";
 import { executeSwap } from "@/services/swap";
+import { simulateSweep } from "@/services/tokenomics";
 
 const SOLANA_RPC = process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
 const NETWORK = process.env.SOLANA_NETWORK ?? "devnet";
@@ -116,6 +117,14 @@ export async function POST(req: Request) {
         .eq("id", orderRow.id);
     }
 
+    // -----------------------------------------------------------------
+    // 5. Sweep & Tokenomics Burn
+    // -----------------------------------------------------------------
+    let sweepResult = null;
+    if (swapResult.success) {
+      sweepResult = await simulateSweep(orderRow?.id ?? "unknown-order", Number(amount), NETWORK);
+    }
+
     const walletDisplay = `${walletPublicKey.slice(0, 4)}...${walletPublicKey.slice(-4)}`;
 
     return NextResponse.json({
@@ -129,6 +138,8 @@ export async function POST(req: Request) {
       explorerUrl: swapResult.explorerUrl,
       provider: swapResult.provider,
       network: NETWORK,
+      sweep: sweepResult,
+      tokenSymbol: tokenMint ? "Creator Token" : "BagxPress Pass"
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);

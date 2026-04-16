@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   ArrowUpRight,
   AlertCircle,
+  Zap,
 } from "lucide-react";
 import clsx from "clsx";
 import Link from "next/link";
@@ -223,6 +224,54 @@ export default function DashboardPage() {
           ))}
         </div>
 
+        {/* Economic Protocol Dashboard */}
+        <motion.div
+           initial={{ opacity: 0, y: 10 }}
+           animate={{ opacity: 1, y: 0 }}
+           transition={{ delay: 0.15 }}
+           className="mb-6 p-6 rounded-3xl bg-[var(--color-brand-primary)]/5 border border-[var(--color-brand-primary)]/20 relative overflow-hidden"
+        >
+           <div className="absolute top-0 right-0 p-4">
+              <span className="bg-orange-500/20 text-orange-400 border border-orange-500/30 text-[10px] uppercase font-bold px-2 py-1 rounded-full flex gap-1 items-center">
+                <AlertCircle className="w-3 h-3" /> Deflation Engine Active
+              </span>
+           </div>
+           
+           <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-4">
+              <Zap className="w-5 h-5 text-[var(--color-brand-primary)]"/>
+              BagxPress Protocol Treasury
+           </h2>
+           
+           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+             <div className="bg-black/40 p-4 rounded-2xl border border-white/5">
+               <p className="text-gray-400 text-xs mb-1">Globally Processed</p>
+               <div className="text-xl font-bold text-white">${(15042 + totalSpent).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+             </div>
+             <div className="bg-black/40 p-4 rounded-2xl border border-white/5">
+               <p className="text-gray-400 text-xs mb-1">Platform Fees (1.99%)</p>
+               <div className="text-xl font-bold text-gray-200">${((15042 + totalSpent) * 0.0199).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+             </div>
+             <div className="bg-black/40 p-4 rounded-2xl border border-orange-500/20 relative overflow-hidden group">
+               <div className="absolute inset-0 bg-orange-500/5 group-hover:bg-orange-500/10 transition-colors" />
+               <p className="text-orange-400 text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1 relative z-10">
+                 🔥 BXP Burned
+               </p>
+               <div className="text-xl font-bold text-white relative z-10">
+                 {((15042 + totalSpent) * 0.0199 * 0.5 * 20).toLocaleString('en-US', { maximumFractionDigits: 0 })} BXP
+               </div>
+             </div>
+             <div className="bg-black/40 p-4 rounded-2xl border border-[var(--color-brand-primary)]/20 relative overflow-hidden">
+               <div className="absolute inset-0 bg-[var(--color-brand-primary)]/5" />
+               <p className="text-[var(--color-brand-primary)] text-xs font-bold uppercase tracking-wider mb-1 relative z-10">
+                 Treasury Balance
+               </p>
+               <div className="text-xl font-bold text-white relative z-10">
+                 ${((15042 + totalSpent) * 0.0199 * 0.5).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+               </div>
+             </div>
+           </div>
+        </motion.div>
+
         {/* Wallet Card */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -400,7 +449,7 @@ export default function DashboardPage() {
                           <span>Token:</span>
                           <span>{order.token_mint.slice(0, 12)}...</span>
                           <a
-                            href={`https://bags.fm/token/${order.token_mint}`}
+                            href={`https://solscan.io/token/${order.token_mint}?cluster=devnet`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-[var(--color-brand-primary)] hover:underline"

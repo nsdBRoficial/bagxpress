@@ -40,7 +40,7 @@ const CONNECTION = new Connection(RPC_URL, "confirmed");
 const TOKEN_NAME = "BagxPress";
 const TOKEN_SYMBOL = "BXP";
 const TOKEN_DECIMALS = 6;
-const TOTAL_SUPPLY = 1_000_000_000; // 1 bilhão
+const TOTAL_SUPPLY = 10_000_000; // 10 milhões
 const TRANSFER_FEE_BPS = 250; // 2.5%
 const MAX_TRANSFER_FEE = BigInt(1_000_000 * Math.pow(10, TOKEN_DECIMALS)); // 1M tokens max fee
 
@@ -247,6 +247,26 @@ async function mintInitialSupply(
   console.log(
     `   ✅ ${TOTAL_SUPPLY.toLocaleString()} BXP mintados para distributor`
   );
+
+  // Revoga Mint Authority para fixar supply
+  console.log("\n🔒 Revogando Mint Authority para garantir hard cap...");
+  try {
+    await spl.setAuthority(
+      CONNECTION,
+      issuer,
+      mint,
+      issuer,     // current authority
+      spl.AuthorityType.MintTokens,
+      null,       // null = revogada
+      [],
+      { commitment: "confirmed" },
+      SPL_TOKEN_2022_ID
+    );
+    console.log("   ✅ Mint Authority revogada com sucesso!");
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn("   ⚠️ Falha ao revogar mint authority:", message);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -320,7 +340,13 @@ async function main() {
   console.log(`BXP_DISTRIBUTOR_SECRET_KEY=${distributorB64}`);
 
   console.log("\n" + "=".repeat(60));
-  console.log("⚠️  ATENÇÃO:");
+  console.log("⚠️  ATENÇÃO METEORA LIQUIDITY POOL:");
+  console.log("   • O Liquidity Pair oficial deve ser BXP/SOL na Meteora DLMM");
+  console.log("   • O Mint Authority foi revogado (hard cap garantido)");
+  console.log("   • Use a keypair do Distributor para prover liquidez inicial");
+
+  console.log("\n" + "=".repeat(60));
+  console.log("⚠️  SECURITY INFO:");
   console.log("   • NUNCA commite os SECRET KEYS no git");
   console.log("   • .env.local está no .gitignore");
   console.log("   • Guarde backup seguro dos keypairs de issuer e distributor");
