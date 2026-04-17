@@ -11,11 +11,10 @@
  *   - PermanentDelegate: Controle de sweep/burn server-side (power move técnico)
  *
  * O que faz:
- * 1. Gera keypairs para issuer e distributor
- * 2. Faz airdrop em devnet
- * 3. Cria mint com extensões Token-2022
- * 4. Minta supply inicial para distributor
- * 5. Exibe mint address e instruções para .env.local
+ * 1. Carrega keypair da Treasury (.env.local) para issuer e distributor
+ * 2. Cria mint com extensões Token-2022
+ * 3. Minta supply inicial diretamente para a Treasury
+ * 4. Exibe mint address e instruções para .env.local
  *
  * REFERÊNCIA: spl-token-2022 npm package + @solana/web3.js
  */
@@ -29,6 +28,10 @@ import {
   sendAndConfirmTransaction,
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
+import bs58 from "bs58";
+import dotenv from "dotenv";
+
+dotenv.config({ path: ".env.local" });
 
 // Token-2022 constants loaded dynamically from @solana/spl-token
 
@@ -50,27 +53,6 @@ const METADATA_URI = "https://bagxpress.xyz/token-metadata/bxp.json";
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-async function airdropIfDevnet(keypair: Keypair, sol = 1): Promise<void> {
-  try {
-    const sig = await CONNECTION.requestAirdrop(
-      keypair.publicKey,
-      sol * LAMPORTS_PER_SOL
-    );
-    const { blockhash, lastValidBlockHeight } =
-      await CONNECTION.getLatestBlockhash("confirmed");
-    await CONNECTION.confirmTransaction(
-      { signature: sig, blockhash, lastValidBlockHeight },
-      "confirmed"
-    );
-    console.log(
-      `   ✅ Airdrop ${sol} SOL → ${keypair.publicKey.toBase58().slice(0, 8)}...`
-    );
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.warn(`   ⚠️  Airdrop falhou: ${message}`);
-  }
-}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -283,20 +265,40 @@ async function main() {
   console.log(`   Extensões: TransferFeeConfig + MetadataPointer + PermanentDelegate`);
   console.log("=".repeat(60));
 
-  // Gera keypairs
-  const issuer = Keypair.generate();
-  const distributor = Keypair.generate();
+  if (!process.env.FEE_PAYER_SECRET_KEY) {
+    console.error("❌ Erro: FEE_PAYER_SECRET_KEY não encontrada no .env.local");
+    process.exit(1);
+  }
 
-  console.log(`\n🔑 Keypairs gerados:`);
-  console.log(`   Issuer:      ${issuer.publicKey.toBase58()}`);
-  console.log(`   Distributor: ${distributor.publicKey.toBase58()}`);
+  // Carrega keypair da Treasury a partir do .env.local
+  let treasuryKeypair: Keypair;
+  try {
+    const secretKeyBase58 = process.env.FEE_PAYER_SECRET_KEY.replace(/["']/g, ""); // remove aspas caso existam
+    treasuryKeypair = Keypair.fromSecretKey(bs58.decode(secretKeyBase58));
+  } catch (err) {
+    try {
+      // Fallback caso a chave antiga esivesse em formato [] (embora a nova esteja em bs58 pelo que notei no .env)
+      const secretKeyJson = JSON.parse(process.env.FEE_PAYER_SECRET_KEY);
+      treasuryKeypair = Keypair.fromSecretKey(Uint8Array.from(secretKeyJson));
+    } catch(err2) {
+       console.error("❌ Erro ao decodificar FEE_PAYER_SECRET_KEY. Certifique-se de que é um formato válido (Base58 ou Array JSON).");
+       process.exit(1);
+    }
+  }
 
-  // Airdrop
-  console.log("\n💸 Solicitando airdrops em devnet...");
-  await airdropIfDevnet(issuer, 2); // 2 SOL para cobrir todas as transações
-  await sleep(2000);
-  await airdropIfDevnet(distributor, 0.5);
-  await sleep(2000);
+  const issuer = treasuryKeypair;
+  const distributor = treasuryKeypair;
+
+  console.log(`\n🔑 Keypair da Treasury carregada:`);
+  console.log(`   Treasury Address: ${treasuryKeypair.publicKey.toBase58()}`);
+
+  const balance = await CONNECTION.getBalance(treasuryKeypair.publicKey);
+  console.log(`   Saldo atual: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
+
+  if (balance < 0.1 * LAMPORTS_PER_SOL) {
+    console.error("❌ Erro: Saldo insuficiente na Treasury (Mínimo recomendado: 0.1 SOL)");
+    process.exit(1);
+  }
 
   // Cria mint Token-2022
   let mint: PublicKey;
@@ -320,36 +322,35 @@ async function main() {
 
   // Exibe instruções de configuração
   const mintAddress = mint.toBase58();
-  const issuerB64 = Buffer.from(issuer.secretKey).toString("base64");
-  const distributorB64 = Buffer.from(distributor.secretKey).toString("base64");
+  const treasurySecretb64 = Buffer.from(treasuryKeypair.secretKey).toString("base64");
 
   console.log("\n" + "=".repeat(60));
-  console.log("🎉 TOKEN BXP CRIADO!\n");
+  console.log("🎉 TOKEN BXP CRIADO NA TREASURY!\n");
   console.log(`   Mint: ${mintAddress}`);
   console.log(
     `   Explorer: https://explorer.solana.com/address/${mintAddress}?cluster=devnet`
   );
 
   console.log("\n" + "=".repeat(60));
-  console.log("📋 PRÓXIMO PASSO — Adicione ao seu .env.local:\n");
+  console.log("📋 PRÓXIMO PASSO — Atualize seu .env.local:\n");
   console.log(`ENABLE_BXP_TOKEN=true`);
   console.log(`BXP_TOKEN_MINT=${mintAddress}`);
   console.log(`BXP_TOKEN_DECIMALS=${TOKEN_DECIMALS}`);
   console.log(`BXP_TOTAL_SUPPLY=${TOTAL_SUPPLY}`);
-  console.log(`BXP_ISSUER_SECRET_KEY=${issuerB64}`);
-  console.log(`BXP_DISTRIBUTOR_SECRET_KEY=${distributorB64}`);
+  console.log(`BXP_ISSUER_SECRET_KEY=${treasurySecretb64} # (A mesma key da Treasury, mas em base64 para uso legado se precisar)`);
+  console.log(`BXP_DISTRIBUTOR_SECRET_KEY=${treasurySecretb64}`);
 
   console.log("\n" + "=".repeat(60));
   console.log("⚠️  ATENÇÃO METEORA LIQUIDITY POOL:");
   console.log("   • O Liquidity Pair oficial deve ser BXP/SOL na Meteora DLMM");
   console.log("   • O Mint Authority foi revogado (hard cap garantido)");
-  console.log("   • Use a keypair do Distributor para prover liquidez inicial");
+  console.log("   • Tudo está unificado na Treasury. O supply de BXP e a Solana estão agrupados na mesma conta.");
 
   console.log("\n" + "=".repeat(60));
   console.log("⚠️  SECURITY INFO:");
   console.log("   • NUNCA commite os SECRET KEYS no git");
   console.log("   • .env.local está no .gitignore");
-  console.log("   • Guarde backup seguro dos keypairs de issuer e distributor");
+  console.log("   • O supply de 10M BXP é irrevocável na Devnet.");
   console.log("=".repeat(60) + "\n");
 }
 
@@ -357,3 +358,4 @@ main().catch((err) => {
   console.error("❌ Erro fatal:", err);
   process.exit(1);
 });
+
