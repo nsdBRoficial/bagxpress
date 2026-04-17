@@ -70,11 +70,13 @@ async function main() {
     const quoteAmount = new BN(1).mul(new BN(10).pow(new BN(9)));      // 1 WSOL
 
     const poolResponse = await raydium.liquidity.createPoolV4({
-      marketId: extInfo.address.marketId,
+      marketInfo: {
+        marketId: extInfo.address.marketId,
+        programId: new PublicKey("EoTcMgcDRTJVZDMZWBoU6pdYNDhn2xXJzXF5j1Zq7Uks") // Devnet OpenBook
+      },
       baseMintInfo: {
         mint: BXP_MINT,
         decimals: 6,
-        programId: TOKEN_2022_PROGRAM_ID, // Usando o standard 2022
       },
       quoteMintInfo: {
         mint: NATIVE_MINT,
@@ -85,6 +87,8 @@ async function main() {
       feeDestinationId: new PublicKey("3XMrhbv989VxAMi3DErLV9eJht1pHppW5LbKxe9fkEFR"), // Devnet Fee Dest
       programId: new PublicKey("HWy1jotHpo6UqeQxx49dpYYdQB8wj9Qk9MdxwjLvDHB8"), // Devnet Raydium AMM V4
       startTime: new BN(0), // imediato
+      ownerInfo: { feePayer: owner.publicKey, useSOLBalance: true },
+      associatedOnly: false,
       txVersion: TxVersion.V0,
       computeBudgetConfig: {
         units: 600000,
