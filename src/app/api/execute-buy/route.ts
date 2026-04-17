@@ -7,18 +7,21 @@
  * 2. Busca/cria wallet real persistida (auth) ou ephemeral (anon)
  * 3. Executa swap via SwapProviderFactory (Bags → Jupiter → SolanaTransfer → Mock)
  * 4. Persiste resultado no banco (orders + transactions)
- * 5. Retorna txHash + explorerUrl clicável
+ * 5. Settlement: Transfere do Treasury para MOCK_CREATOR_WALLET o líquido
+ * 6. Sweep: Aciona buyback e burn reais em BXP via Raydium/Jupiter
  */
 
 import { NextResponse } from "next/server";
-import { Keypair } from "@solana/web3.js";
+import { Keypair, Connection, SystemProgram, Transaction, sendAndConfirmTransaction, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { getOrCreateWallet, getDecryptedKeypair } from "@/services/wallet";
 import { executeSwap } from "@/services/swap";
-import { simulateSweep } from "@/services/tokenomics";
+import { executeSweep, splitFee } from "@/services/tokenomics";
+import bs58 from "bs58";
 
 const SOLANA_RPC = process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
 const NETWORK = process.env.SOLANA_NETWORK ?? "devnet";
+const MOCK_CREATOR_WALLET = process.env.MOCK_CREATOR_WALLET ?? "";
 
 export async function POST(req: Request) {
   try {
@@ -111,18 +114,57 @@ export async function POST(req: Request) {
       await admin
         .from("orders")
         .update({
-          status: swapResult.success ? "completed" : "failed",
-          updated_at: new Date().toISOString(),
+           status: swapResult.success ? "completed" : "failed",
+           updated_at: new Date().toISOString(),
         })
         .eq("id", orderRow.id);
     }
 
     // -----------------------------------------------------------------
-    // 5. Sweep & Tokenomics Burn
+    // 5. Settlement (Creator Wallet) & Sweep (Tokenomics)
     // -----------------------------------------------------------------
     let sweepResult = null;
+    let settlementTx = null;
+
     if (swapResult.success) {
-      sweepResult = await simulateSweep(orderRow?.id ?? "unknown-order", Number(amount), NETWORK);
+      const feeInfo = splitFee(Number(amount));
+      const netCreatorUsd = Number(amount) - feeInfo.totalFeeUsd;
+
+      // Settlement
+      try {
+        if (MOCK_CREATOR_WALLET && process.env.FEE_PAYER_SECRET_KEY) {
+          const secretKeyBase58 = process.env.FEE_PAYER_SECRET_KEY.replace(/["']/g, "");
+          const treasuryKeypair = Keypair.fromSecretKey(bs58.decode(secretKeyBase58));
+          const connection = new Connection(SOLANA_RPC, "confirmed");
+
+          // Simulando a conversão USD -> SOL (simplificado: $200 / SOL)
+          const solAmount = netCreatorUsd / 200; 
+
+          const tx = new Transaction().add(
+             SystemProgram.transfer({
+                fromPubkey: treasuryKeypair.publicKey,
+                toPubkey: new Keypair().publicKey, // dummy para converter base58 logo abaixo
+             }) // Apenas inicializando tx
+          );
+
+          // Subsituir dummy
+          tx.instructions[0] = SystemProgram.transfer({
+            fromPubkey: treasuryKeypair.publicKey,
+            toPubkey: new (require('@solana/web3.js').PublicKey)(MOCK_CREATOR_WALLET),
+            lamports: Math.floor(solAmount * LAMPORTS_PER_SOL),
+          });
+
+          settlementTx = await sendAndConfirmTransaction(connection, tx, [treasuryKeypair], {
+             commitment: "confirmed"
+          });
+          console.log(`[Settlement] Pagamento enviado ao criador: ${settlementTx}`);
+        }
+      } catch (e: unknown) {
+        console.error("[Settlement] Falha ao enviar on-chain para Creator Wallet:", String(e));
+      }
+
+      // Sweep real
+      sweepResult = await executeSweep(orderRow?.id ?? "unknown-order", Number(amount), NETWORK);
     }
 
     const walletDisplay = `${walletPublicKey.slice(0, 4)}...${walletPublicKey.slice(-4)}`;
@@ -139,6 +181,7 @@ export async function POST(req: Request) {
       provider: swapResult.provider,
       network: NETWORK,
       sweep: sweepResult,
+      settlementTx,
       tokenSymbol: tokenMint ? "Creator Token" : "BagxPress Pass"
     });
   } catch (error: unknown) {
@@ -150,3 +193,4 @@ export async function POST(req: Request) {
     );
   }
 }
+
