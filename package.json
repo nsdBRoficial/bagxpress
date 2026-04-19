@@ -3,10 +3,13 @@
   "version": "0.9.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "dev":        "next dev",
+    "build":      "next build",
+    "start":      "next start",
+    "lint":       "eslint",
+    "test":       "vitest run",
+    "test:watch": "vitest",
+    "test:ui":    "vitest --ui"
   },
   "dependencies": {
     "@bagsfm/bags-sdk": "^1.3.7",

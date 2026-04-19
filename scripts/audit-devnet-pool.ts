@@ -44,7 +44,8 @@ async function audit() {
     console.log("Fetching Pool Info from RPC via SDK...");
     const sdkPoolInfo = await raydium.liquidity.getPoolInfoFromRpc({ poolId: POOL_ID });
     
-    console.log("✅ SDK successfully parsed the pool info:", sdkPoolInfo.id.toBase58());
+    console.log("✅ SDK successfully parsed the pool info:", sdkPoolInfo.poolInfo?.id ?? POOL_ID);
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (e: any) {
     console.error("❌ SDK getPoolInfoFromRpc failed:", e.message || String(e));

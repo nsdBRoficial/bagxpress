@@ -55,14 +55,27 @@ interface TxDetails {
     burnTx: string | null;
     bxpBurned: number;
   };
-  tokenSymbol?: string;
+  tokenSymbol?:  string;
+  /** PT-BR: Hash SHA-256 da prova de auditoria / EN: SHA-256 audit proof hash */
+  auditProof?:   string;
+  auditVersion?: string;
+}
+
+interface ExecutionStep {
+  icon:    string;
+  label:   string;
+  message: string;
+  detail?: string;
+  link?:   string | null;
+  status:  "info" | "success" | "warning" | "error";
 }
 
 interface LogEntry {
-  msg: string;
-  time: string;
-  type: "info" | "success" | "error";
-  link?: string | null;
+  msg:    string;
+  detail?: string;
+  time:   string;
+  type:   "info" | "success" | "error" | "warning";
+  link?:  string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -98,7 +111,7 @@ function CheckoutForm({
   creatorWallet?: string | null;
   onSuccess: (data: TxDetails) => void;
   onError: (err: string) => void;
-  addLog: (msg: string, type: "info" | "success" | "error", link?: string) => void;
+  addLog: (msg: string, type: "info" | "success" | "error" | "warning", detail?: string, link?: string) => void;
   setParentState: (s: WidgetState) => void;
 }) {
   const stripe = useStripe();
@@ -115,8 +128,8 @@ function CheckoutForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           orderId: ordId,
-          amount: amt,
-          tokenMint: tokenMint ?? null,
+          amount:  amt,
+          tokenMint:     tokenMint ?? null,
           creatorWallet: creatorWallet ?? null,
         }),
       });
@@ -125,17 +138,36 @@ function CheckoutForm({
       if (!data.success) throw new Error(data.error || "Transaction failed");
 
       setParentState("broadcasting_tx");
-      addLog("Broadcasting transaction to Solana...", "info");
-      await new Promise((r) => setTimeout(r, 800));
 
-      if (data.explorerUrl) {
-        addLog(`✅ TX confirmed on-chain!`, "success", data.explorerUrl);
+      // PT-BR: Mapeia os executionSteps estruturados da API para o log visual
+      // EN:    Maps the structured executionSteps from the API to the visual log
+      if (Array.isArray(data.executionSteps) && data.executionSteps.length > 0) {
+        (data.executionSteps as ExecutionStep[]).forEach((s) => {
+          addLog(
+            `${s.icon} [${s.label}] ${s.message}`,
+            s.status === "warning" ? "info" : s.status === "error" ? "error" :
+              s.status === "success" ? "success" : "info",
+            s.detail,
+            s.link ?? undefined
+          );
+        });
       } else {
-        addLog(`Transaction processed (simulated).`, "success");
-      }
-
-      if (data.sweep) {
-        addLog(`🔥 Protocol bought & burned ${data.sweep.bxpBurned.toFixed(2)} $BXP via fees.`, "info", data.sweep.burnTx ? `https://explorer.solana.com/tx/${data.sweep.burnTx}?cluster=devnet` : undefined);
+        // PT-BR: Fallback para API sem executionSteps (versão anterior)
+        // EN:    Fallback for API without executionSteps (previous version)
+        if (data.explorerUrl) {
+          addLog(`✅ TX confirmed on-chain!`, "success", undefined, data.explorerUrl);
+        } else {
+          addLog(`Transaction processed (simulated).`, "success");
+        }
+        if (data.sweep) {
+          const bxpLabel = (data.sweep.bxpBurned / 1e6).toFixed(4);
+          addLog(
+            `🔥 Protocol bought & burned ${bxpLabel} $BXP via fees.`,
+            "info",
+            undefined,
+            data.sweep.burnTx ? `https://explorer.solana.com/tx/${data.sweep.burnTx}?cluster=devnet` : undefined
+          );
+        }
       }
 
       onSuccess(data);
@@ -242,10 +274,10 @@ export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
   const [clientSecret, setClientSecret] = useState<string>("");
   const [orderId, setOrderId] = useState<string>("");
 
-  const addLog = (msg: string, type: "info" | "success" | "error" = "info", link?: string) => {
+  const addLog = (msg: string, type: "info" | "success" | "error" | "warning" = "info", detail?: string, link?: string) => {
     setLogs((prev) => [
       ...prev,
-      { msg, type, time: new Date().toLocaleTimeString("en-US", { hour12: false }), link: link ?? null },
+      { msg, detail, type, time: new Date().toLocaleTimeString("en-US", { hour12: false }), link: link ?? null },
     ]);
   };
 
@@ -671,6 +703,29 @@ export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
                   <span className="text-gray-400 text-xs">Network</span>
                   <span className="text-xs text-white font-mono">{txDetails.network ?? "devnet"}</span>
                 </div>
+
+                {/* Audit Proof SHA-256 */}
+                {txDetails.auditProof && (
+                  <div className="flex flex-col gap-1.5 pt-2 border-t border-white/8">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400 text-xs flex items-center gap-1">
+                        📋 Audit Hash
+                      </span>
+                      <span className="text-[10px] text-gray-600 font-mono">
+                        {txDetails.auditVersion ?? "bxp-audit-v1"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 bg-black/40 rounded-lg p-2 border border-white/5">
+                      <code className="text-[10px] font-mono text-[#00bdae] flex-1 truncate">
+                        {txDetails.auditProof}
+                      </code>
+                      <CopyButton text={txDetails.auditProof} />
+                    </div>
+                    <p className="text-[9px] text-gray-700 font-mono text-center">
+                      Re-compute with verifyAuditProof() · Zero-trust · Public
+                    </p>
+                  </div>
+                )}
               </motion.div>
 
               <motion.div
@@ -737,43 +792,52 @@ export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
         </AnimatePresence>
       </motion.div>
 
-      {/* Terminal Logs */}
+      {/* Terminal Logs — Full Transparency */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="w-full h-48 bg-[#050505] border border-white/8 rounded-2xl p-4 font-mono text-xs overflow-y-auto flex flex-col gap-1 shadow-inner"
+        className="w-full bg-[#050505] border border-white/8 rounded-2xl p-4 font-mono text-xs overflow-y-auto flex flex-col gap-1 shadow-inner"
+        style={{ height: "18rem" }}
       >
         <div className="text-gray-600 border-b border-gray-800 pb-2 mb-1 flex justify-between items-center">
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            System execution logs
+            Execution logs — Full Transparency
           </span>
-          <span className="text-gray-700">zero-ux-v2</span>
+          <span className="text-gray-700">zero-ux-v4</span>
         </div>
         {logs.length === 0 ? (
           <span className="text-gray-700 italic">Waiting for interactions...</span>
         ) : (
           logs.map((log, i) => (
-            <div key={i} className="flex gap-2 items-start">
-              <span className="text-gray-600 shrink-0">[{log.time}]</span>
-              <span className={clsx(
-                "flex-1",
-                log.type === "error" ? "text-red-400"
-                : log.type === "success" ? "text-green-400"
-                : "text-gray-300"
-              )}>
-                {log.msg}
-              </span>
-              {log.link && (
-                <a
-                  href={log.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 flex items-center gap-0.5 text-[var(--color-brand-primary)] hover:underline"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                </a>
+            <div key={i} className="flex flex-col gap-0.5 py-0.5 border-b border-white/3 last:border-0">
+              <div className="flex gap-2 items-start">
+                <span className="text-gray-600 shrink-0">[{log.time}]</span>
+                <span className={clsx(
+                  "flex-1 leading-relaxed",
+                  log.type === "error"   ? "text-red-400"
+                  : log.type === "success" ? "text-green-400"
+                  : log.type === "warning" ? "text-yellow-400"
+                  : "text-gray-300"
+                )}>
+                  {log.msg}
+                </span>
+                {log.link && (
+                  <a
+                    href={log.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 flex items-center gap-0.5 text-[var(--color-brand-primary)] hover:underline"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+              </div>
+              {log.detail && (
+                <span className="text-gray-600 pl-16 text-[10px] leading-relaxed">
+                  ↳ {log.detail}
+                </span>
               )}
             </div>
           ))
