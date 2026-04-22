@@ -53,6 +53,7 @@ export interface SwapParams {
   /** Network para o explorer url */
   network: string;
   /** RPC endpoint */
+  rpcUrl: string;
   /** Oracle: preço live do SOL em USD (opcional) */
   usdPerSol?: number;
 }

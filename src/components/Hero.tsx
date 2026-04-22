@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { ArrowRight, Zap, Target, ShieldCheck } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import LiveFeedWidget from "@/components/LiveFeedWidget";
+
 const Hero3D = dynamic(() => import("@/components/Hero3D"), { ssr: false });
 
 export default function Hero() {
@@ -80,15 +82,25 @@ export default function Hero() {
           </motion.div>
         </div>
 
-        {/* Right Content - 3D Hero */}
+        {/* Right Content - 3D Hero & Live Feed */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
-          className="relative h-[400px] lg:h-[600px] w-full hidden sm:block"
+          className="relative h-[400px] lg:h-[600px] w-full hidden sm:flex flex-col items-center justify-center"
         >
           <div className="absolute inset-0 bg-gradient-to-tr from-[var(--color-brand-primary)]/10 to-transparent rounded-full blur-[100px]" />
           <Hero3D />
+
+          {/* Live Feed Widget Floating */}
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 1 }}
+            className="absolute -bottom-10 lg:bottom-10 right-0 lg:-right-4 z-20 w-full max-w-[320px]"
+          >
+            <LiveFeedWidget />
+          </motion.div>
         </motion.div>
 
       </div>
