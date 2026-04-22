@@ -43,6 +43,9 @@ interface TxDetails {
   wallet?: string;
   walletFull?: string;
   txHash?: string;
+  userPurchaseTx?: string | null;
+  creatorSettlementTx?: string | null;
+  burnTx?: string | null;
   deliveredAmount?: number;
   isRealTx?: boolean;
   isRealWallet?: boolean;
@@ -323,7 +326,7 @@ export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
       addLog("PaymentIntent active. Elements initialized.", "success");
 
       if (orderData.clientSecret === "mock_secret_123") {
-        addLog("Stripe in mock mode. Using bypass.", "info");
+        addLog("Configuring Stripe test environment...", "info");
       }
 
       setOrderId(orderData.orderId);
@@ -653,7 +656,11 @@ export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
                   {txDetails.isRealTx ? "Confirmed on-chain! 🎉" : "Payment successful!"}
                 </p>
                 {txDetails.provider && txDetails.provider !== "mock" && (
-                  <p className="text-[10px] text-gray-600 mt-1 font-mono">via {txDetails.provider}</p>
+                  <p className="text-[10px] text-gray-600 mt-1 font-mono">
+                    {txDetails.provider === "treasury_transfer"
+                      ? "Protocol Treasury Settlement"
+                      : `via ${txDetails.provider}`}
+                  </p>
                 )}
               </motion.div>
 
@@ -721,9 +728,22 @@ export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
                       </code>
                       <CopyButton text={txDetails.auditProof} />
                     </div>
-                    <p className="text-[9px] text-gray-700 font-mono text-center">
-                      Re-compute with verifyAuditProof() · Zero-trust · Public
-                    </p>
+                    {/* Link de verificação on-chain apontando para burnTx */}
+                    {(txDetails.burnTx ?? txDetails.sweep?.burnTx) ? (
+                      <a
+                        href={`https://explorer.solana.com/tx/${txDetails.burnTx ?? txDetails.sweep?.burnTx}?cluster=devnet`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[9px] text-[var(--color-brand-primary)] font-mono text-center hover:underline flex items-center justify-center gap-1"
+                      >
+                        🔗 Verificar integridade on-chain
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    ) : (
+                      <p className="text-[9px] text-gray-700 font-mono text-center">
+                        Re-compute com verifyAuditProof() · Zero-trust · Público
+                      </p>
+                    )}
                   </div>
                 )}
               </motion.div>

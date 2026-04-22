@@ -26,21 +26,23 @@ import { createHash } from "crypto";
 
 export interface AuditData {
   /** PT-BR: ID único da ordem de compra / EN: Unique purchase order ID */
-  orderId:       string;
+  orderId:        string;
   /** PT-BR: Valor total pago em USD / EN: Total amount paid in USD */
-  amountUsd:     number;
+  amountUsd:      number;
+  /** PT-BR: Hash da tx de compra do usuário (swap/treasury) / EN: User purchase tx hash */
+  userPurchaseTx: string | null;
   /** PT-BR: Hash da transação de settlement (repasse ao criador) / EN: Creator payout transaction hash */
-  settlementTx:  string | null;
+  settlementTx:   string | null;
   /** PT-BR: Hash da transação de buyback / EN: Buyback transaction hash */
-  buybackTx:     string | null;
+  buybackTx:      string | null;
   /** PT-BR: Hash da transação de burn / EN: Burn transaction hash */
-  burnTx:        string | null;
+  burnTx:         string | null;
   /** PT-BR: Preço do SOL em USD no momento da transação (Oracle) / EN: SOL price in USD at transaction time (Oracle) */
-  usdPerSol:     number;
+  usdPerSol:      number;
   /** PT-BR: Quantidade de BXP queimada (em unidades brutas, sem decimais) / EN: Amount of BXP burned (in raw units, no decimals) */
-  burnedAmount:  number;
+  burnedAmount:   number;
   /** PT-BR: Timestamp ISO 8601 da transação / EN: ISO 8601 timestamp of the transaction */
-  timestamp:     string;
+  timestamp:      string;
 }
 
 export interface AuditProofResult {
@@ -79,15 +81,16 @@ function canonicalize(data: AuditData): string {
   // PT-BR: Normaliza nulls para a string "null" para evitar ambiguidade
   // EN:    Normalizes nulls to the string "null" to avoid ambiguity
   const normalized: Record<string, string | number> = {
-    orderId:      data.orderId,
-    amountUsd:    data.amountUsd,
-    settlementTx: data.settlementTx ?? "null",
-    buybackTx:    data.buybackTx    ?? "null",
-    burnTx:       data.burnTx       ?? "null",
-    usdPerSol:    data.usdPerSol,
-    burnedAmount: data.burnedAmount,
-    timestamp:    data.timestamp,
-    version:      PROOF_VERSION,
+    orderId:        data.orderId,
+    amountUsd:      data.amountUsd,
+    userPurchaseTx: data.userPurchaseTx ?? "null",   // V6: hash da compra do usuário
+    settlementTx:   data.settlementTx   ?? "null",
+    buybackTx:      data.buybackTx      ?? "null",
+    burnTx:         data.burnTx         ?? "null",
+    usdPerSol:      data.usdPerSol,
+    burnedAmount:   data.burnedAmount,
+    timestamp:      data.timestamp,
+    version:        PROOF_VERSION,
   };
 
   // PT-BR: Ordena as chaves alfabeticamente para serialização canônica
