@@ -4,6 +4,7 @@ import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import BuyWidget, { type CreatorContext } from "@/components/BuyWidget";
 import CreatorCard, { type CreatorProfile } from "@/components/CreatorCard";
+import LiveFeedWidget from "@/components/LiveFeedWidget";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layers, Zap } from "lucide-react";
 
@@ -83,38 +84,9 @@ export default function DemoPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
-              className="mt-4 p-5 rounded-2xl bg-white/5 border border-white/10"
+              className="mt-4 flex justify-center lg:justify-start"
             >
-              <h3 className="font-bold text-white mb-3 flex items-center gap-2 text-sm">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_10px_#4ade80]" />
-                Live System Status
-              </h3>
-              <div className="grid grid-cols-2 gap-3 text-xs font-mono text-gray-400">
-                <div className="flex flex-col">
-                  <span className="text-gray-600 uppercase mb-0.5">Relay Engine</span>
-                  <span className="text-green-400">zero-ux-v2</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-gray-600 uppercase mb-0.5">Bags API</span>
-                  <span className="text-[var(--color-brand-secondary)]">live ✓</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-gray-600 uppercase mb-0.5">Network</span>
-                  <span className="text-yellow-400">solana-devnet</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-gray-600 uppercase mb-0.5">Auth</span>
-                  <span className="text-green-400">supabase ✓</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-gray-600 uppercase mb-0.5">Swap</span>
-                  <span>bags→jupiter→proof</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-gray-600 uppercase mb-0.5">Wallet</span>
-                  <span className="text-green-400">encrypted ✓</span>
-                </div>
-              </div>
+              <LiveFeedWidget />
             </motion.div>
           </motion.div>
 
