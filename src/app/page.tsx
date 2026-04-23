@@ -1,6 +1,7 @@
 import Hero from "@/components/Hero";
 import ProblemSection from "@/components/ProblemSection";
 import SolutionSection from "@/components/SolutionSection";
+import FrontierStack from "@/components/FrontierStack";
 import TechStack from "@/components/TechStack";
 import Tokenomics from "@/components/Tokenomics";
 import MarketSection from "@/components/MarketSection";
@@ -17,6 +18,7 @@ export default function Home() {
       <Hero />
       <ProblemSection />
       <SolutionSection />
+      <FrontierStack />
       <TechStack />
       <Tokenomics />
       <MarketSection />
