@@ -142,7 +142,6 @@ function CheckoutForm({
 
       setParentState("broadcasting_tx");
 
-      // PT-BR: Mapeia os executionSteps estruturados da API para o log visual
       // EN:    Maps the structured executionSteps from the API to the visual log
       if (Array.isArray(data.executionSteps) && data.executionSteps.length > 0) {
         (data.executionSteps as ExecutionStep[]).forEach((s) => {
@@ -155,7 +154,6 @@ function CheckoutForm({
           );
         });
       } else {
-        // PT-BR: Fallback para API sem executionSteps (versão anterior)
         // EN:    Fallback for API without executionSteps (previous version)
         if (data.explorerUrl) {
           addLog(`✅ TX confirmed on-chain!`, "success", undefined, data.explorerUrl);
@@ -728,7 +726,7 @@ export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
                       </code>
                       <CopyButton text={txDetails.auditProof} />
                     </div>
-                    {/* Link de verificação on-chain apontando para burnTx */}
+                    {/* EN: On-chain verification link pointing to burnTx */}
                     {(txDetails.burnTx ?? txDetails.sweep?.burnTx) ? (
                       <a
                         href={`https://explorer.solana.com/tx/${txDetails.burnTx ?? txDetails.sweep?.burnTx}?cluster=devnet`}
@@ -736,12 +734,12 @@ export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
                         rel="noopener noreferrer"
                         className="text-[9px] text-[var(--color-brand-primary)] font-mono text-center hover:underline flex items-center justify-center gap-1"
                       >
-                        🔗 Verificar integridade on-chain
+                        🔗 Verify on-chain integrity
                         <ExternalLink className="w-2.5 h-2.5" />
                       </a>
                     ) : (
                       <p className="text-[9px] text-gray-700 font-mono text-center">
-                        Re-compute com verifyAuditProof() · Zero-trust · Público
+                        Re-compute with verifyAuditProof() · Zero-trust · Public
                       </p>
                     )}
                   </div>

@@ -39,12 +39,14 @@ describe('Swap Service', () => {
   });
 
   it('should fallback to mock swap if all providers fail', async () => {
+    process.env.ALLOW_MOCK_PROVIDER = "true";
     // Disable contract flags implicitly by not having them
     const result = await executeSwap(mockParams);
     expect(result.success).toBe(true);
     // Even if others fail, the last one MockSwapProvider always succeeds
     expect(result.provider).toBe('mock');
     expect(result.txHash).toContain('mock_');
+    delete process.env.ALLOW_MOCK_PROVIDER;
   });
 
   it('should use anchor smart contract when flags enable it', async () => {

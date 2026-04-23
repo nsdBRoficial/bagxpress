@@ -153,7 +153,7 @@ export default function CreatorCard({ onCreatorSelected }: CreatorCardProps) {
       const json = await res.json();
 
       if (!json.success) {
-        throw new Error(json.error || "Erro ao buscar creator");
+        throw new Error(json.error || "Error fetching creator");
       }
 
       setData(json.data);
@@ -165,7 +165,7 @@ export default function CreatorCard({ onCreatorSelected }: CreatorCardProps) {
         onCreatorSelected?.(primary, json.data.tokenMint);
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Erro desconhecido";
+      const message = err instanceof Error ? err.message : "Unknown error";
       setError(message);
     } finally {
       setIsLoading(false);
@@ -193,7 +193,7 @@ export default function CreatorCard({ onCreatorSelected }: CreatorCardProps) {
       <form onSubmit={handleSearch} className="flex flex-col gap-3">
         <div className="flex flex-col gap-1.5">
           <label className="text-xs text-gray-400 font-medium uppercase tracking-widest">
-            Token Mint Address (recomendado)
+            Token Mint Address (recommended)
           </label>
           <div className="relative">
             <input
@@ -209,7 +209,7 @@ export default function CreatorCard({ onCreatorSelected }: CreatorCardProps) {
 
         <div className="flex items-center gap-3">
           <div className="flex-1 h-px bg-white/10" />
-          <span className="text-xs text-gray-600 uppercase tracking-wider">ou</span>
+          <span className="text-xs text-gray-600 uppercase tracking-wider">or</span>
           <div className="flex-1 h-px bg-white/10" />
         </div>
 
@@ -240,7 +240,7 @@ export default function CreatorCard({ onCreatorSelected }: CreatorCardProps) {
               ) : (
                 <Search className="w-4 h-4" />
               )}
-              Buscar
+              Search
             </button>
           </div>
         </div>
@@ -275,7 +275,7 @@ export default function CreatorCard({ onCreatorSelected }: CreatorCardProps) {
             <div className="flex items-center gap-2 mb-0.5">
               <TrendingUp className="w-3.5 h-3.5 text-[var(--color-brand-secondary)]" />
               <span className="text-[10px] text-gray-500 uppercase tracking-widest font-mono">
-                Trending na Bags
+                Trending on Bags
               </span>
               <div className="flex-1 h-px bg-white/5" />
               <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shadow-[0_0_6px_#4ade80]" />
@@ -284,7 +284,7 @@ export default function CreatorCard({ onCreatorSelected }: CreatorCardProps) {
             {feedLoading ? (
               <div className="flex items-center gap-2 text-gray-600 text-xs py-2">
                 <Loader2 className="w-3 h-3 animate-spin" />
-                Carregando feed...
+                Loading feed...
               </div>
             ) : (
               <div className="flex flex-col gap-1.5">
@@ -364,7 +364,7 @@ export default function CreatorCard({ onCreatorSelected }: CreatorCardProps) {
                   rel="noopener noreferrer"
                   className="ml-auto flex items-center gap-1 text-[10px] text-[var(--color-brand-primary)] hover:underline"
                 >
-                  Ver no Bags <ExternalLink className="w-2.5 h-2.5" />
+                  View on Bags <ExternalLink className="w-2.5 h-2.5" />
                 </a>
               )}
             </div>
@@ -430,7 +430,7 @@ export default function CreatorCard({ onCreatorSelected }: CreatorCardProps) {
                       </span>
                       {creator.isCreator && (
                         <span className="text-[10px] text-[var(--color-brand-primary)] font-bold uppercase tracking-wider">
-                          Criador Principal
+                          Primary Creator
                         </span>
                       )}
                     </div>

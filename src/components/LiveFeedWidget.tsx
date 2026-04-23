@@ -29,35 +29,66 @@ interface Order {
   transactions: Transaction[];
 }
 
+interface Metrics {
+  avgResponse: number;
+  burnedTokens: number;
+  treasuryBalance: number;
+  oraclePrice: number;
+  lastTxHash: string | null;
+  lastTxExplorerUrl: string | null;
+}
+
+interface FeedResponse {
+  success: boolean;
+  data: Order[];
+  metrics?: Metrics;
+}
+
+const AnimatedValue = ({ value, suffix = "", prefix = "", decimals = 0 }: { value: number, suffix?: string, prefix?: string, decimals?: number }) => (
+  <AnimatePresence mode="popLayout">
+    <motion.span
+      key={value}
+      initial={{ opacity: 0, y: -5 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 5 }}
+      transition={{ duration: 0.2 }}
+      className="inline-block"
+    >
+      {prefix}{value.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}{suffix}
+    </motion.span>
+  </AnimatePresence>
+);
+
 export default function LiveFeedWidget() {
-  const { data, isValidating } = useSWR<{ success: boolean; data: Order[] }>("/api/feed", fetcher, {
+  const { data, isValidating } = useSWR<FeedResponse>("/api/feed", fetcher, {
     refreshInterval: 5000,
     revalidateOnFocus: true,
   });
 
   const orders = data?.data ?? [];
-  const latestOrder = orders.length > 0 ? orders[0] : null;
-  const latestTx = latestOrder?.transactions?.[0];
+  const metrics = data?.metrics;
 
-  // Mock dynamic data for effect
-  const [avgResponse, setAvgResponse] = useState(245);
-  const [burnedTokens, setBurnedTokens] = useState(125430);
   const [timeSinceSync, setTimeSinceSync] = useState(0);
 
   useEffect(() => {
-    const resInterval = setInterval(() => {
-      setAvgResponse(prev => Math.max(120, prev + Math.floor(Math.random() * 30 - 15)));
-    }, 3000);
-    
     const syncInterval = setInterval(() => {
       setTimeSinceSync(prev => prev + 1);
     }, 1000);
 
     return () => {
-      clearInterval(resInterval);
       clearInterval(syncInterval);
     };
   }, []);
+
+  // Real metrics with fallbacks for initial load
+  const avgResponse = metrics?.avgResponse ?? 0;
+  const burnedTokens = metrics?.burnedTokens ?? 0;
+  const treasuryBalance = metrics?.treasuryBalance ?? 0;
+  const oraclePrice = metrics?.oraclePrice ?? 0;
+  
+  // Try to use the widget metrics last tx, fallback to latest order
+  const latestTxHash = metrics?.lastTxHash ?? orders?.[0]?.transactions?.[0]?.tx_hash;
+  const latestTxUrl = metrics?.lastTxExplorerUrl ?? orders?.[0]?.transactions?.[0]?.explorer_url;
 
   // Reset sync counter when data refreshes
   useEffect(() => {
@@ -114,7 +145,7 @@ export default function LiveFeedWidget() {
             <div className="flex justify-between items-center text-xs">
               <span className="text-white/60">Latency</span>
               <span className="text-white font-mono flex items-center gap-1">
-                {avgResponse}ms
+                <AnimatedValue value={avgResponse} suffix="ms" />
               </span>
             </div>
           </div>
@@ -152,20 +183,24 @@ export default function LiveFeedWidget() {
           </h4>
           <div className="space-y-2.5">
             <div className="flex justify-between items-center text-xs">
-              <span className="text-white/60">Oracle Price</span>
-              <span className="text-[var(--color-brand-accent)] font-mono">$0.01</span>
+              <span className="text-white/60">$SOL Oracle Price</span>
+              <span className="text-[var(--color-brand-accent)] font-mono">
+                <AnimatedValue value={oraclePrice} prefix="$" decimals={4} />
+              </span>
             </div>
             <div className="flex justify-between items-center text-xs">
-              <span className="text-white/60">Burned Today</span>
+              <span className="text-white/60">Burned Total</span>
               <div className="flex items-center gap-1">
                 <Flame className="w-3 h-3 text-orange-500" />
-                <span className="text-white font-mono">{burnedTokens.toLocaleString()}</span>
+                <span className="text-white font-mono">
+                  <AnimatedValue value={burnedTokens} />
+                </span>
               </div>
             </div>
             <div className="flex justify-between items-center text-xs">
               <span className="text-white/60">Treasury</span>
               <span className="text-white font-mono flex items-center gap-1">
-                Healthy <ChevronRight className="w-3 h-3 text-white/40" />
+                <AnimatedValue value={treasuryBalance} suffix=" SOL" decimals={2} /> <ChevronRight className="w-3 h-3 text-white/40" />
               </span>
             </div>
           </div>
@@ -187,13 +222,13 @@ export default function LiveFeedWidget() {
             </div>
             <div className="flex justify-between items-center text-xs">
               <span className="text-white/60">Last Tx</span>
-              {latestTx ? (
+              {latestTxHash ? (
                 <a 
-                  href={latestTx.explorer_url ?? `https://explorer.solana.com/tx/${latestTx.tx_hash}?cluster=devnet`} 
+                  href={latestTxUrl ?? `https://explorer.solana.com/tx/${latestTxHash}?cluster=devnet`} 
                   target="_blank" rel="noopener noreferrer"
                   className="text-white font-mono text-[10px] hover:text-[var(--color-brand-primary)] flex items-center gap-1 transition-colors"
                 >
-                  {latestTx.tx_hash.slice(0, 6)}... <ExternalLink className="w-2.5 h-2.5" />
+                  {latestTxHash.slice(0, 6)}... <ExternalLink className="w-2.5 h-2.5" />
                 </a>
               ) : (
                 <span className="text-white/40 font-mono text-[10px]">waiting...</span>
@@ -218,7 +253,10 @@ export default function LiveFeedWidget() {
               <Server className="w-full h-full text-white" />
             </div>
           </div>
-          <span className="text-[10px] text-white/50 font-medium tracking-wide">ENTERPRISE READY</span>
+          <span className="text-[10px] text-green-400/80 font-medium tracking-wide flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            LIVE ON-CHAIN DATA
+          </span>
         </div>
         <div className="flex items-center gap-1 text-[10px] font-mono text-white/40">
           <Clock className="w-3 h-3" />

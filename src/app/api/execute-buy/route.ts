@@ -115,13 +115,13 @@ export async function POST(req: Request) {
       );
     }
 
-    step("🚀", "Protocolo", "BagxPress Zero-UX Protocol iniciado", "info");
+    step("🚀", "Protocolo", "BagxPress Zero-UX Protocol initiated", "info");
 
     // -----------------------------------------------------------------------
     // ORACLE: Busca preço live do SOL / Fetch live SOL price
     // -----------------------------------------------------------------------
 
-    step("🔮", "Oracle", "Buscando cotação live do SOL...", "info");
+    step("🔮", "Oracle", "Fetching live SOL quote...", "info");
     const oracle = await getSolPrice();
 
     const oracleSourceLabel =
@@ -132,9 +132,9 @@ export async function POST(req: Request) {
     step(
       "💱",
       "Oracle",
-      `Conversão Oracle: 1 SOL = $${oracle.usdPerSol.toFixed(2)} USD`,
+      `Oracle Conversion: 1 SOL = $${oracle.usdPerSol.toFixed(2)} USD`,
       oracle.source === "fallback" ? "warning" : "success",
-      `Fonte: ${oracleSourceLabel}${oracle.cached ? " (cache)" : " (live)"}`,
+      `Source: ${oracleSourceLabel}${oracle.cached ? " (cache)" : " (live)"}`,
     );
 
     const usdPerSol = oracle.usdPerSol;
@@ -151,7 +151,7 @@ export async function POST(req: Request) {
     step(
       "💰",
       "Fees",
-      `Valor bruto: $${amountNum.toFixed(2)} | Taxa: $${feeInfo.totalFeeUsd.toFixed(2)} | Líquido: $${netCreatorUsd.toFixed(2)}`,
+      `Gross amount: $${amountNum.toFixed(2)} | Fee: $${feeInfo.totalFeeUsd.toFixed(2)} | Net: $${netCreatorUsd.toFixed(2)}`,
       "info",
       `Treasury: $${feeInfo.treasuryFeeUsd.toFixed(2)} | Buyback: $${feeInfo.buybackFeeUsd.toFixed(2)}`
     );
@@ -183,7 +183,7 @@ export async function POST(req: Request) {
         keypair          = decrypted.keypair;
         walletPublicKey  = walletInfo.publicKey;
         isRealWallet     = true;
-        step("🔐", "Wallet", `Wallet persistida resolvida`, "success", `${walletPublicKey.slice(0, 8)}...${walletPublicKey.slice(-4)}`);
+        step("🔐", "Wallet", `Persistent wallet resolved`, "success", `${walletPublicKey.slice(0, 8)}...${walletPublicKey.slice(-4)}`);
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : String(e);
         console.warn("[execute-buy] Falha ao resolver wallet real, usando efêmera:", message);
@@ -191,15 +191,15 @@ export async function POST(req: Request) {
         walletPublicKey = keypair.publicKey.toBase58();
         // PT-BR: Narrativa Zero-UX — chave efêmera gerada instantaneamente, sem atrito
         // EN:    Zero-UX narrative — ephemeral key generated instantly, zero friction
-        step("⚡", "Zero-UX", "[Zero-UX] Chave efêmera criada para checkout instantâneo", "info",
-          "Sem wallet obrigatória · Conversão máxima para novos usuários · " + walletPublicKey.slice(0, 8) + "..."
+        step("⚡", "Zero-UX", "Ephemeral key created for instant checkout", "info",
+          "No wallet required · Maximum conversion for new users · " + walletPublicKey.slice(0, 8) + "..."
         );
       }
     } else {
       keypair         = Keypair.generate();
       walletPublicKey = keypair.publicKey.toBase58();
-      step("⚡", "Zero-UX", "[Zero-UX] Chave efêmera criada para checkout instantâneo", "info",
-        "Sem wallet obrigatória · Sessão anônima · " + walletPublicKey.slice(0, 8) + "..."
+      step("⚡", "Zero-UX", "Ephemeral key created for instant checkout", "info",
+        "No wallet required · Anonymous session · " + walletPublicKey.slice(0, 8) + "..."
       );
     }
 
@@ -207,7 +207,7 @@ export async function POST(req: Request) {
     // -----------------------------------------------------------------------
     // 3. Executar swap / Execute swap
     // -----------------------------------------------------------------------
-    step("⚡", "Swap", `Roteando swap para user wallet via ${NETWORK}...`, "info");
+    step("⚡", "Swap", `Routing swap to user wallet via ${NETWORK}...`, "info");
 
     const swapResult = await executeSwap({
       keypair,
@@ -232,11 +232,11 @@ export async function POST(req: Request) {
         "Swap",
         `Treasury Transfer Confirmed via ${providerLabel}`,
         "success",
-        `${swapResult.deliveredAmount} tokens entregues`,
+        `${swapResult.deliveredAmount} tokens delivered`,
         explorerUrl
       );
     } else {
-      step("✅", "Swap", `Swap processado via ${swapResult.provider}`, "info", `${swapResult.deliveredAmount} tokens`);
+      step("✅", "Swap", `Swap processed via ${swapResult.provider}`, "info", `${swapResult.deliveredAmount} tokens`);
     }
 
     // -----------------------------------------------------------------------
@@ -283,7 +283,7 @@ export async function POST(req: Request) {
       step(
         "💸",
         "Settlement",
-        `Repassando $${netCreatorUsd.toFixed(2)} (~${netSolAmount.toFixed(5)} SOL) ao criador...`,
+        `Forwarding $${netCreatorUsd.toFixed(2)} (~${netSolAmount.toFixed(5)} SOL) to creator...`,
         "info",
         `${netLamports} lamports @ 1 SOL = $${usdPerSol.toFixed(2)}`
       );
@@ -296,7 +296,7 @@ export async function POST(req: Request) {
         if (!hasSettlementConfig) {
           step(
             "⚠️", "Settlement",
-            "Skipped: MOCK_CREATOR_WALLET ou FEE_PAYER_SECRET_KEY ausente",
+            "Skipped: MOCK_CREATOR_WALLET or FEE_PAYER_SECRET_KEY missing",
             "warning"
           );
         } else {
@@ -330,7 +330,7 @@ export async function POST(req: Request) {
           step(
             "✅",
             "Settlement",
-            `Repasse ao criador confirmado on-chain`,
+            `Creator settlement confirmed on-chain`,
             "success",
             `${settlementTx.slice(0, 10)}...${settlementTx.slice(-6)} | $${netCreatorUsd.toFixed(2)} USD`,
             settleExplorerUrl
@@ -338,11 +338,11 @@ export async function POST(req: Request) {
         }
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
-        step("❌", "Settlement", `Falha no repasse ao criador: ${msg}`, "error");
+        step("❌", "Settlement", `Failed to forward to creator: ${msg}`, "error");
       }
 
       // ── 6. Sweep: Buyback + Burn ───────────────────────────────────────
-      step("🔄", "Sweep", "Iniciando Buyback + Burn via protocolo tokenomics...", "info");
+      step("🔄", "Sweep", "Initiating Buyback + Burn via tokenomics protocol...", "info");
 
       sweepResult = await executeSweep(
         orderRow?.id ?? "unknown-order",
@@ -356,13 +356,13 @@ export async function POST(req: Request) {
         step(
           "🔄",
           "Buyback",
-          `Buyback executado na Raydium CPMM Pool`,
+          `Buyback executed on Raydium CPMM Pool`,
           "success",
           `${sweepResult.buybackTx.slice(0, 10)}... | Provider: ${sweepResult.provider}`,
           buybackUrl
         );
       } else {
-        step("⚠️", "Buyback", `Buyback processado via ${sweepResult.provider ?? "protocol"}`, "warning");
+        step("⚠️", "Buyback", `Buyback processed via ${sweepResult.provider ?? "protocol"}`, "warning");
       }
 
       const bxpHuman = (sweepResult.bxpBurned / 1e6).toFixed(4);
@@ -372,13 +372,13 @@ export async function POST(req: Request) {
         step(
           "🔥",
           "Burn",
-          `Queimados ${bxpHuman} $BXP on-chain`,
+          `Burned ${bxpHuman} $BXP on-chain`,
           "success",
           `${sweepResult.burnTx.slice(0, 10)}...${sweepResult.burnTx.slice(-6)}`,
           burnUrl
         );
       } else {
-        step("🔥", "Burn", `${bxpHuman} $BXP marcados para queima (simulado)`, "info");
+        step("🔥", "Burn", `${bxpHuman} $BXP marked for burn (simulated)`, "info");
       }
     }
 
@@ -403,7 +403,7 @@ export async function POST(req: Request) {
       "Audit",
       `Audit Hash: ${formatAuditHash(auditProofResult.hash)}`,
       "success",
-      `SHA-256 · ${auditProofResult.version} · Verificável publicamente`
+      `SHA-256 · ${auditProofResult.version} · Publicly verifiable`
     );
 
     // -----------------------------------------------------------------------
@@ -414,7 +414,7 @@ export async function POST(req: Request) {
     step(
       "🎉",
       "Protocolo",
-      "Fluxo BagxPress concluído com sucesso!",
+      "BagxPress flow completed successfully!",
       "success",
       `Oracle: $${usdPerSol.toFixed(2)}/SOL | Provider: ${swapResult.provider}`
     );

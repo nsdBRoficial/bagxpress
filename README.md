@@ -1,87 +1,87 @@
-# BagxPress 💼⚡ — MVP 3.0
+# BagxPress 💼⚡ — MVP 8.1.0
 
 > **Hackathon Build — Bags x Stripe Track**  
-> **Status: 🟢 LIVE na Solana Devnet** — Pool CPMM ativa com 9 SOL de volume on-chain
+> **Status: 🟢 LIVE on Solana Devnet** — CPMM Pool active with 9 SOL on-chain volume
 
-O checkout invisível para tokens de creators na Solana com **DeFi nativo e deflação on-chain**.  
-Compre tokens Bags.fm com cartão de crédito e contribua automaticamente para o buyback/burn do $BXP — **sem wallet, sem gas, sem atrito**.
+The invisible checkout for creator tokens on Solana with **native DeFi and on-chain deflation**.  
+Buy Bags.fm tokens with a credit card and automatically contribute to the $BXP buyback/burn — **no wallet, no gas, zero friction**.
 
 ---
 
-## 📡 Endereços On-Chain (Devnet)
+## 📡 On-Chain Addresses (Devnet)
 
-| Componente | Endereço | Explorer |
+| Component | Address | Explorer |
 |---|---|---|
-| **BXP Token (SPL)** | `5xSwDXXc2pp5xy99sAAdFuhyGPv1XQPectZrxtG6tRKL` | [Ver Token](https://explorer.solana.com/address/5xSwDXXc2pp5xy99sAAdFuhyGPv1XQPectZrxtG6tRKL?cluster=devnet) |
-| **Pool CPMM** | `3jygr64wdRBsfqyVLziPrEPwvNEDxrJ3sxRkTWEziAoy` | [Ver Pool](https://explorer.solana.com/address/3jygr64wdRBsfqyVLziPrEPwvNEDxrJ3sxRkTWEziAoy?cluster=devnet) |
-| **Treasury** | `517XAbeMaaybt4G8BQrxcGAvnKNzGXCbsbQ2Hsqsge9G` | [Ver Treasury](https://explorer.solana.com/address/517XAbeMaaybt4G8BQrxcGAvnKNzGXCbsbQ2Hsqsge9G?cluster=devnet) |
-| **Vault WSOL** | `HLHzWq8ev6LEMnh44XzejeQ1AojAczpdbM1wyptb91fc` | [Ver Vault](https://explorer.solana.com/address/HLHzWq8ev6LEMnh44XzejeQ1AojAczpdbM1wyptb91fc?cluster=devnet) |
-| **Vault BXP** | `7wgn7H77GXppC2BWKEQruK4FerxUJj5nm9jBP19ZTo99` | [Ver Vault](https://explorer.solana.com/address/7wgn7H77GXppC2BWKEQruK4FerxUJj5nm9jBP19ZTo99?cluster=devnet) |
+| **BXP Token (SPL)** | `5xSwDXXc2pp5xy99sAAdFuhyGPv1XQPectZrxtG6tRKL` | [View Token](https://explorer.solana.com/address/5xSwDXXc2pp5xy99sAAdFuhyGPv1XQPectZrxtG6tRKL?cluster=devnet) |
+| **CPMM Pool** | `3jygr64wdRBsfqyVLziPrEPwvNEDxrJ3sxRkTWEziAoy` | [View Pool](https://explorer.solana.com/address/3jygr64wdRBsfqyVLziPrEPwvNEDxrJ3sxRkTWEziAoy?cluster=devnet) |
+| **Treasury** | `517XAbeMaaybt4G8BQrxcGAvnKNzGXCbsbQ2Hsqsge9G` | [View Treasury](https://explorer.solana.com/address/517XAbeMaaybt4G8BQrxcGAvnKNzGXCbsbQ2Hsqsge9G?cluster=devnet) |
+| **WSOL Vault** | `HLHzWq8ev6LEMnh44XzejeQ1AojAczpdbM1wyptb91fc` | [View Vault](https://explorer.solana.com/address/HLHzWq8ev6LEMnh44XzejeQ1AojAczpdbM1wyptb91fc?cluster=devnet) |
+| **BXP Vault** | `7wgn7H77GXppC2BWKEQruK4FerxUJj5nm9jBP19ZTo99` | [View Vault](https://explorer.solana.com/address/7wgn7H77GXppC2BWKEQruK4FerxUJj5nm9jBP19ZTo99?cluster=devnet) |
 | **CPMM Program** | `DRaycpLY18LhpbydsBWbVJtxpNv9oXPgjRSfpF2bWpYb` | Raydium CPMM Devnet |
 
 ---
 
-## 🏆 QA MVP 3.0 — Resultados
+## 🏆 QA MVP 8.1.0 — Results
 
-**Bateria de 13 testes on-chain executados em 2026-04-17:**
+**Suite of 13 on-chain tests executed:**
 
-| Teste | Descrição | Status |
+| Test | Description | Status |
 |---|---|---|
 | T01 | Treasury SOL Balance (>5 SOL) | ✅ 19.1 SOL |
-| T02 | BXP Mint existe on-chain | ✅ Supply 10M |
-| T03 | Mint Authority revogada (hard cap) | ✅ Imutável |
-| T04 | BXP ATA da Treasury | ✅ ~9M BXP |
-| T05 | WSOL ATA da Treasury | ✅ 0.5 WSOL |
-| T06 | CPMM Pool existe on-chain | ✅ 637 bytes |
-| T07 | Pool owner = CPMM Program | ✅ Verificado |
-| T08 | Vault WSOL com saldo real | ✅ 10.11 WSOL |
-| T09 | Vault BXP com saldo real | ✅ ~994K BXP |
-| T10 | computeSwapAmount retorna preço válido | ✅ 0.099 SOL/BXP |
-| T11 | Swap real on-chain executado | ✅ [Ver Tx](https://explorer.solana.com/tx/3WqvZ1nCViDHbCwGqpJiHCVV3Mzs3RbRNnVUDswTxkHmBXgF157ua49RndMBLyygvNDRQHSmc8c3HDU9WH4nyq6o?cluster=devnet) |
-| T12 | Burn on-chain executado (1 BXP) | ✅ [Ver Tx](https://explorer.solana.com/tx/d9Jurf5J5azaVd3AXZ8osFhHYiGUQq2jXtciEx1YRH71hnZeCswr1kaTdwftjW5BUPwpwYeKmZxUBhmVuzXsHBr?cluster=devnet) |
-| T13 | TypeScript build | ⚠️ Avisos não-críticos |
+| T02 | BXP Mint exists on-chain | ✅ Supply 10M |
+| T03 | Mint Authority revoked (hard cap) | ✅ Immutable |
+| T04 | Treasury BXP ATA | ✅ ~9M BXP |
+| T05 | Treasury WSOL ATA | ✅ 0.5 WSOL |
+| T06 | CPMM Pool exists on-chain | ✅ 637 bytes |
+| T07 | Pool owner = CPMM Program | ✅ Verified |
+| T08 | WSOL Vault with real balance | ✅ 10.11 WSOL |
+| T09 | BXP Vault with real balance | ✅ ~994K BXP |
+| T10 | computeSwapAmount returns valid price | ✅ 0.099 SOL/BXP |
+| T11 | Real on-chain swap executed | ✅ [View Tx](https://explorer.solana.com/tx/3WqvZ1nCViDHbCwGqpJiHCVV3Mzs3RbRNnVUDswTxkHmBXgF157ua49RndMBLyygvNDRQHSmc8c3HDU9WH4nyq6o?cluster=devnet) |
+| T12 | On-chain burn executed (1 BXP) | ✅ [View Tx](https://explorer.solana.com/tx/d9Jurf5J5azaVd3AXZ8osFhHYiGUQq2jXtciEx1YRH71hnZeCswr1kaTdwftjW5BUPwpwYeKmZxUBhmVuzXsHBr?cluster=devnet) |
+| T13 | TypeScript build | ⚠️ Non-critical warnings |
 
 **Score: 12 PASS / 0 FAIL / 1 WARN**
 
 ---
 
-## 🚀 O que é o BagxPress?
+## 🚀 What is BagxPress?
 
-BagxPress é uma camada de abstração de pagamentos que conecta:
+BagxPress is a payment abstraction layer that connects:
 
 - **Stripe** (fiat onramp) ↔ **Bags API** (creator tokens) ↔ **Solana** (blockchain)
 
-O usuário final **nunca vê uma wallet**. Ele simplesmente:
-1. Encontra o creator no campo de busca
-2. Seleciona o amount
-3. Autentica com FaceID ou cartão
-4. O token é entregue e uma fração vai para o buyback/burn do $BXP — ponto final.
+The end user **never sees a wallet**. They simply:
+1. Find the creator in the search field
+2. Select the amount
+3. Authenticate with FaceID or card
+4. The token is delivered and a fraction goes to the $BXP buyback/burn — that's it.
 
 ---
 
-## 💡 v3.0 — DeFi Nativo + Pure Fairlaunch
+## 💡 v8.1.0 — Native DeFi + Pure Fairlaunch
 
-### Novidades desta versão
+### New in this version
 
-| Feature | Status | Descrição |
+| Feature | Status | Description |
 |---|---|---|
-| `BXP_CLASSIC` Token (SPL) | ✅ | 10M fixos, Mint Authority revogada |
-| Raydium CPMM Pool | ✅ | BXP/WSOL ativa na Devnet |
-| Bot de Tração | ✅ | 90 swaps, 9 SOL de volume, 0 falhas |
-| Buyback automático | ✅ | Raydium CPMM → Jupiter fallback |
-| Burn atômico on-chain | ✅ | `burnChecked()` SPL Token |
-| `tokenomics.ts` v3.1 | ✅ | Engine de sweep completa |
-| `DEVNET_LIMITATIONS.md` | ✅ | Documentação técnica das limitações |
+| `BXP_CLASSIC` Token (SPL) | ✅ | Fixed 10M, Mint Authority revoked |
+| Raydium CPMM Pool | ✅ | BXP/WSOL active on Devnet |
+| Traction Bot | ✅ | 90 swaps, 9 SOL volume, 0 failures |
+| Automatic Buyback | ✅ | Raydium CPMM → Jupiter fallback |
+| Atomic on-chain burn | ✅ | `burnChecked()` SPL Token |
+| `tokenomics.ts` v3.1 | ✅ | Complete sweep engine |
+| `DEVNET_LIMITATIONS.md` | ✅ | Technical documentation of limitations |
 
-### Arquitetura do Flywheel
+### Flywheel Architecture
 
 ```
 Stripe Checkout (Fiat)
         │  
         ▼  1.99% fee
 ╔═══════════════════╗
-║    Treasury       ║  50% → Operacional
-║  517XAb...sge9G   ║  50% → Buyback → Burn (deflacionário)
+║    Treasury       ║  50% → Operational
+║  517XAb...sge9G   ║  50% → Buyback → Burn (deflationary)
 ╚═══════════════════╝
         │
         ▼ Raydium CPMM (Primary)
@@ -89,20 +89,20 @@ Stripe Checkout (Fiat)
   WSOL → BXP → burnChecked()
         │
         ▼ Jupiter (Fallback)
-  Roteamento automático se CPMM falhar
+  Automatic routing if CPMM fails
 ```
 
-### Por que SPL Clássico (e não Token-2022)?
+### Why Classic SPL (and not Token-2022)?
 
-O Raydium CPMM na Devnet retorna `Error 6007: NotSupportMint` para tokens com extensões Token-2022 (`TransferFeeConfig`, `PermanentDelegate`). Detalhes técnicos em [DEVNET_LIMITATIONS.md](./DEVNET_LIMITATIONS.md).
+The Raydium CPMM on Devnet returns `Error 6007: NotSupportMint` for tokens with Token-2022 extensions (`TransferFeeConfig`, `PermanentDelegate`). Technical details in [DEVNET_LIMITATIONS.md](./DEVNET_LIMITATIONS.md).
 
-A arquitetura Token-2022 completa está preparada para a **Mainnet**.
+The complete Token-2022 architecture is prepared for **Mainnet**.
 
 ---
 
 ## ⚙️ Setup
 
-### 1. Clone e instale
+### 1. Clone and install
 
 ```bash
 git clone https://github.com/nsdBRoficial/bagxpress
@@ -110,15 +110,15 @@ cd bagxpress
 npm install
 ```
 
-### 2. Configure as variáveis de ambiente
+### 2. Configure environment variables
 
 ```bash
 cp .env.example .env.local
 ```
 
-Edite `.env.local` com suas chaves.
+Edit `.env.local` with your keys.
 
-### 3. Rode
+### 3. Run
 
 ```bash
 npm run dev
@@ -127,41 +127,41 @@ npm run dev
 
 ---
 
-## 🔥 Scripts DeFi
+## 🔥 DeFi Scripts
 
 ```bash
-# Cria token BXP_CLASSIC (SPL, 10M, mint revogada)
+# Creates BXP_CLASSIC token (SPL, 10M, mint revoked)
 npx tsx scripts/create-classic-bxp.ts
 
-# Cria Pool CPMM BXP/WSOL na Devnet
+# Creates CPMM BXP/WSOL Pool on Devnet
 npx tsx scripts/launch-cpmm-pool.ts
 
-# Valida um swap real antes do bot
+# Validates a real swap before the bot
 npx tsx scripts/test-cpmm-swap.ts
 
-# Roda o bot de tração (90 swaps de 0.1 SOL)
+# Runs the traction bot (90 swaps of 0.1 SOL)
 npx tsx scripts/simulate-traction-cpmm.ts
 
-# Bateria completa de QA (13 testes on-chain)
+# Complete QA suite (13 on-chain tests)
 npx tsx scripts/qa-v3.ts
 ```
 
 ---
 
-## 🗂️ Estrutura do Projeto
+## 🗂️ Project Structure
 
 ```
 src/
 ├── app/
 │   ├── api/
-│   │   ├── bags/creator/route.ts   ← Busca creator/token da Bags API
-│   │   ├── create-order/           ← Cria PaymentIntent Stripe
-│   │   └── execute-buy/            ← Executa swap Jupiter + Solana
-│   ├── demo/page.tsx               ← Demo com CreatorCard
+│   │   ├── bags/creator/route.ts   ← Fetches creator/token from Bags API
+│   │   ├── create-order/           ← Creates Stripe PaymentIntent
+│   │   └── execute-buy/            ← Executes Jupiter + Solana swap
+│   ├── demo/page.tsx               ← Demo with CreatorCard
 │   └── page.tsx                    ← Landing page
 ├── components/
-│   ├── CreatorCard.tsx             ← Search + profile card dinâmico
-│   ├── BuyWidget.tsx               ← Aceita creatorContext
+│   ├── CreatorCard.tsx             ← Search + dynamic profile card
+│   ├── BuyWidget.tsx               ← Accepts creatorContext
 │   └── ...
 └── services/
     ├── tokenomics.ts               ← 🆕 v3.1 — Buyback/Burn engine
@@ -171,11 +171,11 @@ src/
 scripts/
 ├── create-classic-bxp.ts          ← 🆕 SPL Token mint
 ├── launch-cpmm-pool.ts            ← 🆕 Raydium CPMM Pool
-├── simulate-traction-cpmm.ts      ← 🆕 Bot de tração 90 swaps
-├── test-cpmm-swap.ts              ← 🆕 Teste de 1 swap
-└── qa-v3.ts                       ← 🆕 Bateria QA completa
+├── simulate-traction-cpmm.ts      ← 🆕 90 swaps traction bot
+├── test-cpmm-swap.ts              ← 🆕 1 swap test
+└── qa-v3.ts                       ← 🆕 Complete QA suite
 
-DEVNET_LIMITATIONS.md              ← 🆕 Documentação técnica
+DEVNET_LIMITATIONS.md              ← 🆕 Technical documentation
 ```
 
 ---
@@ -197,6 +197,6 @@ DEVNET_LIMITATIONS.md              ← 🆕 Documentação técnica
 
 ---
 
-## 📜 Licença
+## 📜 License
 
-MIT — Feito para o Bags x Stripe Hackathon 2026.
+MIT — Made for the Bags x Stripe Hackathon 2026.

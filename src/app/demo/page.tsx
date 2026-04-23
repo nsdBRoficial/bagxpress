@@ -35,7 +35,7 @@ export default function DemoPage() {
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--color-brand-primary)]/10 border border-[var(--color-brand-primary)]/20 text-[var(--color-brand-primary)] text-xs font-bold uppercase tracking-widest mb-4"
           >
             <Zap className="w-3 h-3" />
-            BagxPress v1.0 — Real Product Mode
+            BagxPress v8.1 — Real Product Mode
           </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: -12 }}
@@ -51,7 +51,7 @@ export default function DemoPage() {
             transition={{ delay: 0.2 }}
             className="text-[var(--color-text-secondary)] text-lg font-sans max-w-xl mx-auto"
           >
-            Busque um creator da Bags, selecione e compre o token dele sem wallet. Direto do cartão de crédito.
+            Search for a Bags creator, select them, and buy their token without a wallet. Directly from your credit card.
           </motion.p>
         </div>
 
@@ -73,7 +73,7 @@ export default function DemoPage() {
                 <div className="w-7 h-7 rounded-lg bg-[var(--color-brand-primary)]/20 flex items-center justify-center">
                   <Layers className="w-4 h-4 text-[var(--color-brand-primary)]" />
                 </div>
-                <h2 className="text-white font-bold text-sm">Buscar Creator da Bags</h2>
+                <h2 className="text-white font-bold text-sm">Search Bags Creator</h2>
               </div>
 
               <CreatorCard onCreatorSelected={handleCreatorSelected} />
@@ -109,7 +109,7 @@ export default function DemoPage() {
                 >
                   <div className="w-2 h-2 rounded-full bg-[var(--color-brand-primary)] animate-pulse" />
                   <span className="text-sm text-white font-medium">
-                    Comprando token de{" "}
+                    Buying token from{" "}
                     <span className="text-[var(--color-brand-primary)] font-bold">
                       @{selectedCreator.displayName}
                     </span>
@@ -123,7 +123,7 @@ export default function DemoPage() {
                     onClick={() => setSelectedCreator(null)}
                     className="ml-auto text-gray-500 hover:text-white text-xs transition-colors"
                   >
-                    ✕ Limpar
+                    ✕ Clear
                   </button>
                 </motion.div>
               )}
