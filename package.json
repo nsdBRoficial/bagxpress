@@ -1,6 +1,6 @@
 {
   "name": "bagxpress",
-  "version": "8.1.0",
+  "version": "9.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -19,6 +19,8 @@
     "@raydium-io/raydium-sdk-v2": "^0.2.41-alpha",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.0",
+    "@solana/wallet-adapter-base": "^0.9.27",
+    "@solana/wallet-adapter-react": "^0.15.39",
     "@solana/web3.js": "^1.98.4",
     "@stripe/react-stripe-js": "^6.2.0",
     "@stripe/stripe-js": "^9.2.0",

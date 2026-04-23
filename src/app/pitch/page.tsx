@@ -24,7 +24,7 @@ function Section({
 }: {
   id: string;
   label: string;
-  icon: React.ElementType;
+  icon: React.ElementType<{ className?: string; style?: React.CSSProperties }>;
   title: string;
   children: React.ReactNode;
   accent?: string;
