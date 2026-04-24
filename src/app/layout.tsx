@@ -16,20 +16,33 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "BagxPress | No Wallet. No Gas. No Friction.",
-  description: "Convert Web2 Fans Into Web3 Holders in Seconds. The invisible checkout layer for Bags & Solana ecosystem.",
+  title: "BagxPress — Zero UX Creator Token Checkout",
+  description: "Convert Web2 fans into Web3 holders instantly on Solana.",
+  icons: {
+    icon: "/logobxp.png",
+    shortcut: "/logobxp.png",
+    apple: "/logobxp.png",
+  },
   openGraph: {
-    title: "BagxPress v9.0 — Colosseum Edition",
-    description: "The invisible checkout layer for the Bags ecosystem. Seamless Web2 to Web3 onboarding via Stripe & Solana.",
-    url: "https://bagxpress.xyz",
+    title: "BagxPress — Zero UX Creator Token Checkout",
+    description: "Convert Web2 fans into Web3 holders instantly on Solana. The invisible checkout layer for the Bags ecosystem.",
+    url: "https://bagxpress.vercel.app",
     siteName: "BagxPress",
     locale: "en_US",
     type: "website",
+    images: [
+      {
+        url: "/logobxp.png",
+        width: 800,
+        height: 600,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "BagxPress | The Invisible Checkout Layer",
-    description: "Convert Web2 Fans Into Web3 Holders in 10 Seconds.",
+    title: "BagxPress — Zero UX Creator Token Checkout",
+    description: "Convert Web2 fans into Web3 holders instantly on Solana.",
+    images: ["/logobxp.png"],
   }
 };
 

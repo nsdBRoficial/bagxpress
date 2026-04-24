@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Flame, Landmark, Activity, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 
 export default function Tokenomics() {
   return (
@@ -128,15 +129,12 @@ export default function Tokenomics() {
               ))}
             </div>
             
-            <motion.button 
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.8 }}
+            <Link 
+              href="/docs"
               className="w-fit text-[var(--color-brand-secondary)] font-medium hover:text-white transition-colors underline underline-offset-4 decoration-white/20"
             >
               Read full whitepaper →
-            </motion.button>
+            </Link>
           </div>
           
         </div>

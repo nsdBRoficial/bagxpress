@@ -35,9 +35,9 @@ export default function DemoWidget() {
   return (
     <section className="py-24 relative overflow-hidden" id="demo">
       <div className="max-w-7xl mx-auto px-6 relative z-10">
-        
+
         <div className="text-center mb-16">
-          <motion.h2 
+          <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -45,7 +45,7 @@ export default function DemoWidget() {
           >
             Live Experience
           </motion.h2>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -57,7 +57,7 @@ export default function DemoWidget() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center max-w-5xl mx-auto">
-          
+
           {/* Widget Mockup */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
@@ -67,7 +67,7 @@ export default function DemoWidget() {
           >
             {/* iPhone Frame */}
             <div className="absolute top-4 left-1/2 -translate-x-1/2 w-32 h-6 bg-black rounded-full z-20" />
-            
+
             <div className="w-full h-full bg-[#0a0a0a] rounded-[32px] overflow-hidden relative flex flex-col pt-16 px-6">
               <div className="text-center mb-8">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[var(--color-brand-primary)] to-[var(--color-brand-secondary)] mx-auto mb-4 flex items-center justify-center text-xl font-bold font-geist">BXP</div>
@@ -77,17 +77,17 @@ export default function DemoWidget() {
 
               {step === 0 && (
                 <div className="flex flex-col gap-4 mt-auto mb-10">
-                  <button 
+                  <button
                     onClick={() => setStep(1)}
                     className="w-full py-4 rounded-xl bg-white text-black font-bold flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors"
                   >
                     Pay with Apple Pay
                   </button>
-                  <button 
+                  <button
                     onClick={() => setStep(1)}
                     className="w-full py-4 rounded-xl bg-[#00bdae] text-white font-bold flex items-center justify-center gap-2 hover:bg-[#00a396] transition-colors"
                   >
-                    Pay with PIX
+                    Pay with Stripe
                   </button>
                   <div className="text-center text-xs text-gray-500 mt-2">
                     Powered by BagxPress ZeroUX
@@ -119,7 +119,7 @@ export default function DemoWidget() {
                   </div>
                   <p className="text-white font-bold text-2xl mb-2">$50 BXP</p>
                   <p className="text-gray-400 text-sm">Automatically secured in wallet.</p>
-                  <button 
+                  <button
                     onClick={() => setStep(0)}
                     className="w-full py-3 mt-8 rounded-xl bg-white/10 text-white font-bold"
                   >
@@ -144,10 +144,10 @@ export default function DemoWidget() {
             </div>
             <div className="p-4 flex flex-col gap-2 overflow-y-auto">
               {logs.map((log, idx) => (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  key={idx} 
+                  key={idx}
                   className="flex items-start gap-3"
                 >
                   <span className="text-gray-500 whitespace-nowrap">[{log.time}]</span>
@@ -169,7 +169,7 @@ export default function DemoWidget() {
               )}
             </div>
           </motion.div>
-          
+
         </div>
       </div>
     </section>

@@ -57,9 +57,14 @@ export default function Hero() {
               Launch Demo
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
-            <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-full glass-panel text-white font-semibold hover:bg-white/10 transition-all border border-white/20">
+            <a 
+              href="https://github.com/nsdBRoficial/bagxpress" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-full glass-panel text-white font-semibold hover:bg-white/10 transition-all border border-white/20"
+            >
               View GitHub
-            </button>
+            </a>
           </motion.div>
 
           {/* Micro Trust Badges */}

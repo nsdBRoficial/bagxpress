@@ -21,10 +21,12 @@ export default function Navbar() {
   });
 
   const links = [
-    { name: "How it Works", href: "#how-it-works" },
-    { name: "Economy", href: "#economy" },
-    { name: "Live Demo", href: "#demo" },
-    { name: "Security", href: "#security" },
+    { name: "How it Works", href: "/#how-it-works" },
+    { name: "Economy", href: "/#economy" },
+    { name: "Live Demo", href: "/demo" },
+    { name: "Security", href: "/#security" },
+    { name: "Pitch", href: "/pitch" },
+    { name: "Whitepaper", href: "/docs" },
   ];
 
   return (
@@ -39,9 +41,13 @@ export default function Navbar() {
         )}
       >
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[var(--color-brand-primary)] to-[var(--color-brand-secondary)] flex items-center justify-center shadow-[0_0_15px_rgba(124,58,237,0.4)] group-hover:shadow-[0_0_25px_rgba(124,58,237,0.6)] transition-all">
-              <Wallet className="w-5 h-5 text-white" />
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="relative w-10 h-10 flex items-center justify-center transition-transform group-hover:scale-110">
+              <img 
+                src="/logobxp.png" 
+                alt="BagxPress Logo" 
+                className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(124,58,237,0.5)]"
+              />
             </div>
             <span className="font-geist font-bold text-2xl tracking-tight text-white">BagxPress</span>
           </Link>
