@@ -281,8 +281,9 @@ export async function POST(req: Request) {
     let claimUrl: string | null = null;
 
     if (isAnonymous && swapResult.success && swapResult.deliveredAmount > 0) {
+      const mint = tokenMint ?? process.env.BXP_TOKEN_MINT ?? "";
+      console.log(`[execute-buy][Trust Layer] isAnonymous=true | deliveredAmount=${swapResult.deliveredAmount} | mint=${mint} | orderId=${orderId}`);
       try {
-        const mint = tokenMint ?? process.env.BXP_TOKEN_MINT ?? "";
         const claimResult = await createPendingClaim(
           orderId,
           keypair,
@@ -291,6 +292,7 @@ export async function POST(req: Request) {
         );
         claimId  = claimResult.claimId;
         claimUrl = claimResult.claimUrl;
+        console.log(`[execute-buy][Trust Layer] Claim created: ${claimId}`);
         step(
           "🔒",
           "Trust Layer",
@@ -300,9 +302,11 @@ export async function POST(req: Request) {
         );
       } catch (claimErr: unknown) {
         const msg = claimErr instanceof Error ? claimErr.message : String(claimErr);
-        console.error("[execute-buy][Trust Layer] Falha ao criar pending claim:", msg);
+        console.error("[execute-buy][Trust Layer] createPendingClaim FAILED:", msg);
         step("⚠️", "Trust Layer", `Claim vault creation failed: ${msg}`, "warning");
       }
+    } else {
+      console.log(`[execute-buy][Trust Layer] Skipped | isAnonymous=${isAnonymous} | success=${swapResult.success} | amount=${swapResult.deliveredAmount}`);
     }
 
     // -----------------------------------------------------------------------

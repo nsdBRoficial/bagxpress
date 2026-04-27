@@ -59,9 +59,12 @@ interface TxDetails {
     bxpBurned: number;
   };
   tokenSymbol?:  string;
-  /** PT-BR: Hash SHA-256 da prova de auditoria / EN: SHA-256 audit proof hash */
   auditProof?:   string;
   auditVersion?: string;
+  // V11 — Zero UX Trust Layer
+  requiresClaim?: boolean;
+  claimId?: string | null;
+  claimUrl?: string | null;
 }
 
 interface ExecutionStep {
@@ -745,6 +748,30 @@ export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
                   </div>
                 )}
               </motion.div>
+
+              {/* V11 Trust Layer — Claim Banner (sessões anônimas) */}
+              {txDetails.requiresClaim && txDetails.claimUrl && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ delay: 0.45, type: "spring", stiffness: 180 }}
+                  className="w-full rounded-2xl bg-gradient-to-br from-violet-600/20 to-cyan-600/10 border border-violet-500/30 p-5 mb-3"
+                >
+                  <div className="flex items-start gap-3 mb-3">
+                    <span className="text-2xl">🔒</span>
+                    <div>
+                      <p className="text-white font-bold text-sm leading-tight">Your BXP is secured.</p>
+                      <p className="text-white/50 text-xs mt-0.5">Tokens held in protocol vault. Claim to your wallet anytime within 30 days.</p>
+                    </div>
+                  </div>
+                  <a
+                    href={txDetails.claimUrl}
+                    className="block w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 text-white font-bold text-sm text-center hover:opacity-90 transition-opacity shadow-[0_0_20px_rgba(139,92,246,0.4)]"
+                  >
+                    Claim My Tokens →
+                  </a>
+                </motion.div>
+              )}
 
               <motion.div
                 initial={{ opacity: 0, y: 10 }}

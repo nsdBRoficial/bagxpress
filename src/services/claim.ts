@@ -12,6 +12,8 @@
  * - AES-256-GCM via lib/crypto.ts (padrão existente no projeto)
  * - Double-claim bloqueado via validação atômica no DB
  * - Expiração de 30 dias enforçada em resolveClaim
+ *
+ * LOGS SERVER: Todos os eventos emitem [claim] prefixed logs para diagnóstico.
  */
 
 import { Keypair, Connection, PublicKey, Transaction } from "@solana/web3.js";
@@ -58,18 +60,26 @@ export interface ResolveClaimResult {
 const SOLANA_RPC = process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
 
 // ---------------------------------------------------------------------------
+// Guard: verifica pré-requisitos antes de qualquer operação
+// ---------------------------------------------------------------------------
+
+function assertEnvVars() {
+  const missing: string[] = [];
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL)    missing.push("NEXT_PUBLIC_SUPABASE_URL");
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY)   missing.push("SUPABASE_SERVICE_ROLE_KEY");
+  if (!process.env.ENCRYPTION_SECRET)           missing.push("ENCRYPTION_SECRET");
+  if (missing.length > 0) {
+    throw new Error(`[claim] Missing required env vars: ${missing.join(", ")}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Core Functions
 // ---------------------------------------------------------------------------
 
 /**
  * Cria um pending_claim para uma compra anônima.
  * Criptografa a private key da wallet transitória e salva no Supabase.
- *
- * @param orderId    - ID do pedido Stripe
- * @param keypair    - Keypair efêmero que recebeu os tokens
- * @param amount     - Quantidade de BXP entregue
- * @param tokenMint  - Mint address do token SPL
- * @returns claimId e claimUrl
  */
 export async function createPendingClaim(
   orderId: string,
@@ -77,32 +87,64 @@ export async function createPendingClaim(
   amount: number,
   tokenMint: string
 ): Promise<CreateClaimResult> {
-  const supabase = createSupabaseAdminClient();
+  console.log(`[claim] createPendingClaim called | orderId=${orderId} | amount=${amount} | mint=${tokenMint}`);
 
-  // Serializar secret key como base64 e criptografar
-  const secretKeyB64 = Buffer.from(keypair.secretKey).toString("base64");
-  const { encrypted, iv } = await encrypt(secretKeyB64);
+  // 1. Validar env vars
+  assertEnvVars();
+
+  // 2. Validar inputs
+  if (!orderId || !tokenMint) {
+    throw new Error(`[claim] Invalid inputs: orderId=${orderId} tokenMint=${tokenMint}`);
+  }
+  if (!amount || amount <= 0) {
+    throw new Error(`[claim] Invalid amount: ${amount}`);
+  }
 
   const walletPubkey = keypair.publicKey.toBase58();
+  console.log(`[claim] Encrypting keypair for wallet ${walletPubkey.slice(0, 8)}...`);
 
+  // 3. Serializar e criptografar secret key
+  const secretKeyB64 = Buffer.from(keypair.secretKey).toString("base64");
+  let encrypted: string;
+  let iv: string;
+  try {
+    const result = await encrypt(secretKeyB64);
+    encrypted = result.encrypted;
+    iv = result.iv;
+  } catch (encErr: unknown) {
+    const msg = encErr instanceof Error ? encErr.message : String(encErr);
+    throw new Error(`[claim] Encryption failed: ${msg}`);
+  }
+
+  console.log(`[claim] Encryption successful. Inserting into Supabase...`);
+
+  // 4. Inserir no Supabase
+  const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from("pending_claims")
     .insert({
-      order_id: orderId,
-      wallet_pubkey: walletPubkey,
+      order_id:         orderId,
+      wallet_pubkey:    walletPubkey,
       encrypted_secret: encrypted,
-      encryption_iv: iv,
+      encryption_iv:    iv,
       amount,
-      token_mint: tokenMint,
+      token_mint:       tokenMint,
     })
     .select("id")
     .single();
 
-  if (error || !data) {
-    throw new Error(`Failed to create pending claim: ${error?.message ?? "unknown"}`);
+  if (error) {
+    console.error(`[claim] Supabase insert failed:`, error.message, error.details, error.hint);
+    throw new Error(`[claim] DB insert failed: ${error.message}`);
+  }
+
+  if (!data?.id) {
+    throw new Error("[claim] Supabase returned no id after insert.");
   }
 
   const claimId = data.id as string;
+  console.log(`[claim] insert success: ${claimId}`);
+
   return {
     claimId,
     claimUrl: `/claim/${claimId}`,
@@ -111,8 +153,6 @@ export async function createPendingClaim(
 
 /**
  * Retorna o estado público de um claim (sem expor encrypted_secret ou IV).
- *
- * @param id - UUID do claim
  */
 export async function getClaimById(id: string): Promise<PendingClaimPublic | null> {
   const supabase = createSupabaseAdminClient();
@@ -125,7 +165,10 @@ export async function getClaimById(id: string): Promise<PendingClaimPublic | nul
     .eq("id", id)
     .single();
 
-  if (error || !data) return null;
+  if (error || !data) {
+    console.warn(`[claim] getClaimById(${id}) not found:`, error?.message);
+    return null;
+  }
 
   return data as PendingClaimPublic;
 }
@@ -133,18 +176,15 @@ export async function getClaimById(id: string): Promise<PendingClaimPublic | nul
 /**
  * Resolve um claim: descriptografa a wallet transitória e transfere os tokens
  * SPL para a wallet destino. Marca o claim como resgatado.
- *
- * @param id                - UUID do claim
- * @param destinationWallet - Public key destino (Phantom ou wallet autenticada)
- * @returns txHash da transferência on-chain
  */
 export async function resolveClaim(
   id: string,
   destinationWallet: string
 ): Promise<ResolveClaimResult> {
+  console.log(`[claim] resolveClaim | id=${id} | dest=${destinationWallet}`);
   const supabase = createSupabaseAdminClient();
 
-  // 1. Buscar claim completo (com secret) — somente server-side
+  // 1. Buscar claim completo
   const { data: claim, error } = await supabase
     .from("pending_claims")
     .select("*")
@@ -166,7 +206,7 @@ export async function resolveClaim(
     throw new Error("This claim has expired.");
   }
 
-  // 3. Descriptografar a wallet transitória
+  // 3. Descriptografar
   const secretKeyB64 = await decrypt({
     encrypted: claim.encrypted_secret,
     iv: claim.encryption_iv,
@@ -174,7 +214,6 @@ export async function resolveClaim(
   const secretKey = Buffer.from(secretKeyB64, "base64");
   const sourceKeypair = Keypair.fromSecretKey(secretKey);
 
-  // Validação de integridade
   if (sourceKeypair.publicKey.toBase58() !== claim.wallet_pubkey) {
     throw new Error("Claim integrity check failed: public key mismatch.");
   }
@@ -184,24 +223,19 @@ export async function resolveClaim(
   const mintPubkey = new PublicKey(claim.token_mint);
   const destinationPubkey = new PublicKey(destinationWallet);
 
-  // Busca informações do mint para obter decimals
   const mintInfo = await getMint(connection, mintPubkey);
   const decimals = mintInfo.decimals;
-
-  // Quantidade em unidades brutas (ex: BXP com 6 decimals → multiplicar por 1e6)
   const amountRaw = BigInt(Math.round(Number(claim.amount) * Math.pow(10, decimals)));
 
-  // Contas ATA
   const sourceAta = await getAssociatedTokenAddress(mintPubkey, sourceKeypair.publicKey);
   const destinationAta = await getAssociatedTokenAddress(mintPubkey, destinationPubkey);
 
-  // Verificar se a ATA de destino existe, senão criar
   const tx = new Transaction();
   const destinationAtaInfo = await connection.getAccountInfo(destinationAta);
   if (!destinationAtaInfo) {
     tx.add(
       createAssociatedTokenAccountInstruction(
-        sourceKeypair.publicKey, // payer
+        sourceKeypair.publicKey,
         destinationAta,
         destinationPubkey,
         mintPubkey
@@ -209,19 +243,17 @@ export async function resolveClaim(
     );
   }
 
-  // Instrução de transferência
   tx.add(
     createTransferCheckedInstruction(
-      sourceAta,         // from
-      mintPubkey,        // mint
-      destinationAta,    // to
-      sourceKeypair.publicKey, // authority
+      sourceAta,
+      mintPubkey,
+      destinationAta,
+      sourceKeypair.publicKey,
       amountRaw,
       decimals
     )
   );
 
-  // 5. Enviar transação
   const { blockhash } = await connection.getLatestBlockhash();
   tx.recentBlockhash = blockhash;
   tx.feePayer = sourceKeypair.publicKey;
@@ -231,19 +263,18 @@ export async function resolveClaim(
     commitment: "confirmed",
   });
 
-  // 6. Marcar como resgatado (operação atômica)
+  console.log(`[claim] transfer confirmed | txHash=${txHash}`);
+
+  // 5. Marcar como resgatado (double-claim guard)
   await supabase
     .from("pending_claims")
     .update({
-      claimed: true,
+      claimed:    true,
       claimed_by: destinationWallet,
       claimed_at: new Date().toISOString(),
     })
     .eq("id", id)
-    .eq("claimed", false); // double-claim guard
+    .eq("claimed", false);
 
-  return {
-    txHash,
-    claimed_by: destinationWallet,
-  };
+  return { txHash, claimed_by: destinationWallet };
 }
