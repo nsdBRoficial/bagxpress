@@ -113,15 +113,28 @@ export default function DemoWidget() {
               )}
 
               {step === 3 && (
-                <div className="flex flex-col items-center justify-center h-1/2 mt-auto mb-10">
-                  <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mb-6 border border-green-500/50">
+                <div className="flex flex-col items-center justify-center h-1/2 mt-auto mb-6 w-full">
+                  <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mb-4 border border-green-500/50">
                     <Check className="w-10 h-10 text-green-400" />
                   </div>
-                  <p className="text-white font-bold text-2xl mb-2">$50 BXP</p>
-                  <p className="text-gray-400 text-sm">Automatically secured in wallet.</p>
+                  <p className="text-white font-bold text-2xl mb-1">$50 BXP</p>
+                  <p className="text-gray-400 text-xs mb-5">Secured in protocol vault.</p>
+
+                  {/* V11 Trust Layer Banner */}
+                  <div className="w-full rounded-2xl bg-gradient-to-br from-violet-600/20 to-cyan-600/10 border border-violet-500/30 p-4 text-center mb-3">
+                    <p className="text-white font-bold text-sm mb-0.5">🔒 Your BXP is secured.</p>
+                    <p className="text-white/50 text-[11px] mb-3">Claim your assets to any wallet.</p>
+                    <a
+                      href="/claim/demo"
+                      className="block w-full py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 text-white font-bold text-sm hover:opacity-90 transition-opacity"
+                    >
+                      Claim My Tokens →
+                    </a>
+                  </div>
+
                   <button
                     onClick={() => setStep(0)}
-                    className="w-full py-3 mt-8 rounded-xl bg-white/10 text-white font-bold"
+                    className="w-full py-2.5 rounded-xl bg-white/5 text-white/50 font-bold text-xs hover:bg-white/10 transition-colors"
                   >
                     Reset Demo
                   </button>
