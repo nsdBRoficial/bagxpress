@@ -38,6 +38,7 @@ import { executeSwap } from "@/services/swap";
 import { executeSweep, splitFee } from "@/services/tokenomics";
 import { getSolPrice } from "@/services/oracle";
 import { generateAuditProof, formatAuditHash } from "@/services/audit";
+import { createPendingClaim } from "@/services/claim";
 import bs58 from "bs58";
 
 // ---------------------------------------------------------------------------
@@ -175,6 +176,7 @@ export async function POST(req: Request) {
     let keypair: Keypair;
     let walletPublicKey: string;
     let isRealWallet = false;
+    let isAnonymous  = false; // V11: rastreia sessão anônima para pending_claim
 
     if (userId) {
       try {
@@ -189,8 +191,7 @@ export async function POST(req: Request) {
         console.warn("[execute-buy] Falha ao resolver wallet real, usando efêmera:", message);
         keypair         = Keypair.generate();
         walletPublicKey = keypair.publicKey.toBase58();
-        // PT-BR: Narrativa Zero-UX — chave efêmera gerada instantaneamente, sem atrito
-        // EN:    Zero-UX narrative — ephemeral key generated instantly, zero friction
+        isAnonymous     = true;
         step("⚡", "Zero-UX", "Ephemeral key created for instant checkout", "info",
           "No wallet required · Maximum conversion for new users · " + walletPublicKey.slice(0, 8) + "..."
         );
@@ -198,6 +199,7 @@ export async function POST(req: Request) {
     } else {
       keypair         = Keypair.generate();
       walletPublicKey = keypair.publicKey.toBase58();
+      isAnonymous     = true;
       step("⚡", "Zero-UX", "Ephemeral key created for instant checkout", "info",
         "No wallet required · Anonymous session · " + walletPublicKey.slice(0, 8) + "..."
       );
@@ -270,6 +272,47 @@ export async function POST(req: Request) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", orderRow.id);
+    }
+
+    // -----------------------------------------------------------------------
+    // V11: Criar pending_claim para sessões anônimas
+    // -----------------------------------------------------------------------
+    let claimId: string | null = null;
+    let claimUrl: string | null = null;
+
+    if (isAnonymous && swapResult.success && swapResult.deliveredAmount > 0) {
+      // CRÍTICO: usar sempre BXP_TOKEN_MINT — é o token real entregue pelo swap.
+      // tokenMint do body é o creator token (pode não existir na Devnet) — NÃO usar para claim.
+      const bxpMint = process.env.BXP_TOKEN_MINT ?? "";
+      if (!bxpMint) {
+        console.error("[execute-buy][Trust Layer] BXP_TOKEN_MINT not configured — skipping claim creation");
+      } else {
+        console.log(`[execute-buy][Trust Layer] isAnonymous=true | deliveredAmount=${swapResult.deliveredAmount} | bxpMint=${bxpMint} | orderId=${orderId}`);
+        try {
+          const claimResult = await createPendingClaim(
+            orderId,
+            keypair,
+            swapResult.deliveredAmount,
+            bxpMint
+          );
+          claimId  = claimResult.claimId;
+          claimUrl = claimResult.claimUrl;
+          console.log(`[execute-buy][Trust Layer] Claim created: ${claimId}`);
+          step(
+            "🔒",
+            "Trust Layer",
+            `BXP secured in claim vault`,
+            "success",
+            `Claim ID: ${claimId} | Expires in 30 days`,
+          );
+        } catch (claimErr: unknown) {
+          const msg = claimErr instanceof Error ? claimErr.message : String(claimErr);
+          console.error("[execute-buy][Trust Layer] createPendingClaim FAILED:", msg);
+          step("⚠️", "Trust Layer", `Claim vault creation failed: ${msg}`, "warning");
+        }
+      }
+    } else {
+      console.log(`[execute-buy][Trust Layer] Skipped | isAnonymous=${isAnonymous} | success=${swapResult.success} | amount=${swapResult.deliveredAmount}`);
     }
 
     // -----------------------------------------------------------------------
@@ -423,8 +466,7 @@ export async function POST(req: Request) {
       success:              true,
       wallet:               walletDisplay,
       walletFull:           walletPublicKey,
-      // PT-BR: V6 — campos nomeados como a spec exige
-      // EN:    V6 — fields named as spec requires
+      // V6 — campos nomeados como a spec exige
       txHash:               swapResult.txHash,
       userPurchaseTx:       swapResult.txHash,
       creatorSettlementTx:  settlementTx,
@@ -438,8 +480,11 @@ export async function POST(req: Request) {
       sweep:                sweepResult,
       settlementTx,
       tokenSymbol:          tokenMint ? "Creator Token" : "BagxPress Pass",
-      // PT-BR: Payload de Full Transparency — array ordenado de steps de execução
-      // EN:    Full Transparency payload — ordered array of execution steps
+      // V11 — Zero UX Trust Layer
+      requiresClaim:        isAnonymous && !!claimId,
+      claimId,
+      claimUrl,
+      // Full Transparency
       executionSteps:       steps,
       oracle: {
         usdPerSol: oracle.usdPerSol,
@@ -447,8 +492,6 @@ export async function POST(req: Request) {
         cached:    oracle.cached,
         fetchedAt: oracle.fetchedAt,
       },
-      // PT-BR: Audit Proof SHA-256 para verificação criptográfica independente
-      // EN:    SHA-256 Audit Proof for independent cryptographic verification
       auditProof:      auditProofResult.hash,
       auditVersion:    auditProofResult.version,
     });

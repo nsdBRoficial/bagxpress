@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { usePhantom } from "@/contexts/PhantomContext";
 import {
   Wallet,
   Copy,
@@ -112,23 +113,38 @@ export default function DashboardPage() {
   const [loadingWallet, setLoadingWallet] = useState(true);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [walletError, setWalletError] = useState<string | null>(null);
+  const { publicKey, connected, mounted } = usePhantom();
 
-  // Redirect se não autenticado
+  // Redirect se não autenticado (nem Supabase, nem Phantom)
   useEffect(() => {
-    if (!authLoading && !user) {
-      window.location.href = "/";
+    if (mounted && !authLoading) {
+      if (!user && !connected) {
+        window.location.href = "/";
+      }
     }
-  }, [authLoading, user]);
+  }, [authLoading, user, mounted, connected]);
 
   // Carrega wallet
   useEffect(() => {
-    if (!user) return;
     const load = async () => {
       try {
-        const res = await fetch("/api/wallet");
-        const json = await res.json();
-        if (json.success) setWallet(json.wallet);
-        else setWalletError(json.error);
+        setLoadingWallet(true);
+        if (user) {
+          const res = await fetch("/api/wallet");
+          const json = await res.json();
+          if (json.success) setWallet(json.wallet);
+          else setWalletError(json.error);
+        } else if (connected && publicKey) {
+          // Usa proxy via api ou mock visual simples para dashboard phantom-only
+          setWallet({
+            publicKey: publicKey,
+            network: "devnet",
+            balanceSol: 0, // Precisaria buscar on-chain aqui, mockando para focar no fluxo
+            createdAt: new Date().toISOString(),
+            solscanUrl: `https://solscan.io/account/${publicKey}?cluster=devnet`,
+            explorerUrl: `https://explorer.solana.com/address/${publicKey}?cluster=devnet`
+          });
+        }
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : String(e);
         setWalletError(message);
@@ -136,25 +152,30 @@ export default function DashboardPage() {
         setLoadingWallet(false);
       }
     };
-    load();
-  }, [user]);
+    if (user || connected) load();
+  }, [user, connected, publicKey]);
 
   // Carrega orders
   useEffect(() => {
-    if (!user) return;
     const load = async () => {
       try {
-        const res = await fetch("/api/orders");
-        const json = await res.json();
-        if (json.success) setOrders(json.orders ?? []);
+        setLoadingOrders(true);
+        if (user) {
+          const res = await fetch("/api/orders");
+          const json = await res.json();
+          if (json.success) setOrders(json.orders ?? []);
+        } else if (connected && publicKey) {
+          // TODO: Fetch orders from API by wallet public key instead of user session
+          setOrders([]);
+        }
       } finally {
         setLoadingOrders(false);
       }
     };
-    load();
-  }, [user]);
+    if (user || connected) load();
+  }, [user, connected, publicKey]);
 
-  if (authLoading || !user) {
+  if (!mounted || authLoading || (!user && !connected)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-[var(--color-brand-primary)]" />
@@ -167,6 +188,9 @@ export default function DashboardPage() {
   const realTxCount = orders.filter((o) =>
     o.transactions?.[0]?.is_real_tx
   ).length;
+
+  const displayHandle = user ? user.email?.split("@")[0] : `${publicKey?.slice(0, 4)}...${publicKey?.slice(-4)}`;
+  const displayEmail = user ? user.email : "Phantom Wallet Connected";
 
   return (
     <div className="min-h-screen bg-[var(--color-brand-bg-1)] pt-24 pb-16 px-4">
@@ -182,9 +206,9 @@ export default function DashboardPage() {
               BagxPress Dashboard
             </p>
             <h1 className="text-3xl font-bold text-white">
-              {user.email?.split("@")[0]}
+              {displayHandle}
             </h1>
-            <p className="text-gray-500 text-sm mt-1">{user.email}</p>
+            <p className="text-gray-500 text-sm mt-1">{displayEmail}</p>
           </div>
           <div className="flex items-center gap-3">
             <Link

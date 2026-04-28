@@ -22,9 +22,8 @@ export default function Navbar() {
 
   const links = [
     { name: "How it Works", href: "/#how-it-works" },
-    { name: "Economy", href: "/#economy" },
+    { name: "Tokenomics", href: "/tokenomics" },
     { name: "Live Demo", href: "/demo" },
-    { name: "Security", href: "/#security" },
     { name: "Pitch", href: "/pitch" },
     { name: "Whitepaper", href: "/docs" },
   ];
