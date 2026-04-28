@@ -281,29 +281,35 @@ export async function POST(req: Request) {
     let claimUrl: string | null = null;
 
     if (isAnonymous && swapResult.success && swapResult.deliveredAmount > 0) {
-      const mint = tokenMint ?? process.env.BXP_TOKEN_MINT ?? "";
-      console.log(`[execute-buy][Trust Layer] isAnonymous=true | deliveredAmount=${swapResult.deliveredAmount} | mint=${mint} | orderId=${orderId}`);
-      try {
-        const claimResult = await createPendingClaim(
-          orderId,
-          keypair,
-          swapResult.deliveredAmount,
-          mint
-        );
-        claimId  = claimResult.claimId;
-        claimUrl = claimResult.claimUrl;
-        console.log(`[execute-buy][Trust Layer] Claim created: ${claimId}`);
-        step(
-          "🔒",
-          "Trust Layer",
-          `BXP secured in claim vault`,
-          "success",
-          `Claim ID: ${claimId} | Expires in 30 days`,
-        );
-      } catch (claimErr: unknown) {
-        const msg = claimErr instanceof Error ? claimErr.message : String(claimErr);
-        console.error("[execute-buy][Trust Layer] createPendingClaim FAILED:", msg);
-        step("⚠️", "Trust Layer", `Claim vault creation failed: ${msg}`, "warning");
+      // CRÍTICO: usar sempre BXP_TOKEN_MINT — é o token real entregue pelo swap.
+      // tokenMint do body é o creator token (pode não existir na Devnet) — NÃO usar para claim.
+      const bxpMint = process.env.BXP_TOKEN_MINT ?? "";
+      if (!bxpMint) {
+        console.error("[execute-buy][Trust Layer] BXP_TOKEN_MINT not configured — skipping claim creation");
+      } else {
+        console.log(`[execute-buy][Trust Layer] isAnonymous=true | deliveredAmount=${swapResult.deliveredAmount} | bxpMint=${bxpMint} | orderId=${orderId}`);
+        try {
+          const claimResult = await createPendingClaim(
+            orderId,
+            keypair,
+            swapResult.deliveredAmount,
+            bxpMint
+          );
+          claimId  = claimResult.claimId;
+          claimUrl = claimResult.claimUrl;
+          console.log(`[execute-buy][Trust Layer] Claim created: ${claimId}`);
+          step(
+            "🔒",
+            "Trust Layer",
+            `BXP secured in claim vault`,
+            "success",
+            `Claim ID: ${claimId} | Expires in 30 days`,
+          );
+        } catch (claimErr: unknown) {
+          const msg = claimErr instanceof Error ? claimErr.message : String(claimErr);
+          console.error("[execute-buy][Trust Layer] createPendingClaim FAILED:", msg);
+          step("⚠️", "Trust Layer", `Claim vault creation failed: ${msg}`, "warning");
+        }
       }
     } else {
       console.log(`[execute-buy][Trust Layer] Skipped | isAnonymous=${isAnonymous} | success=${swapResult.success} | amount=${swapResult.deliveredAmount}`);

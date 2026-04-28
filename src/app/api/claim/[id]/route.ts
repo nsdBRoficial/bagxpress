@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getClaimById, resolveClaim } from "@/services/claim";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getOrCreateWallet } from "@/services/wallet";
 import { PublicKey } from "@solana/web3.js";
 
 /**
@@ -23,7 +24,6 @@ export async function GET(
     return NextResponse.json({ error: "Claim not found." }, { status: 404 });
   }
 
-  // Verificar expiração
   const expired = new Date() > new Date(claim.expires_at);
 
   return NextResponse.json({
@@ -41,13 +41,13 @@ export async function GET(
 
 /**
  * POST /api/claim/[id]
- * Resolve um claim transferindo tokens para a carteira destino.
+ * Resolve um claim transferindo tokens BXP para a carteira destino.
  *
- * Body: { destinationWallet: string }
+ * Body: { destinationWallet?: string, signature?: string, message?: string, publicKey?: string }
  *
  * Auth aceita:
- *   - Sessão Supabase válida (userId presente)
- *   - Phantom signMessage: body também inclui { signature, message, publicKey }
+ *   1. Sessão Supabase (Google/Email) — wallet é buscada/criada automaticamente
+ *   2. Phantom signMessage — publicKey + signature + message
  */
 export async function POST(
   req: Request,
@@ -61,7 +61,6 @@ export async function POST(
 
   let body: {
     destinationWallet?: string;
-    // Phantom sign-to-claim fields
     signature?: string;
     message?: string;
     publicKey?: string;
@@ -75,13 +74,14 @@ export async function POST(
 
   const { destinationWallet, signature, message, publicKey } = body;
 
-  // --- Validação de autenticação ---
-  // Aceita: sessão Supabase OU Phantom signMessage
+  // --- Autenticação ---
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const isSupabaseAuth = !!user;
 
-  // Phantom auth: verifica se signature + message + publicKey foram enviados
+  // Phantom auth: signature + message + publicKey presentes
   const isPhantomAuth = !!(signature && message && publicKey);
 
   if (!isSupabaseAuth && !isPhantomAuth) {
@@ -91,12 +91,30 @@ export async function POST(
     );
   }
 
-  // Determinar wallet de destino
-  const destination = destinationWallet ?? publicKey;
+  // --- Determinar wallet de destino ---
+  let destination = destinationWallet ?? publicKey;
+
+  // Se usuário Supabase não enviou destinationWallet nem publicKey Phantom,
+  // buscar/criar a wallet Solana do usuário automaticamente.
+  if (!destination && isSupabaseAuth) {
+    try {
+      console.log(`[claim/POST] Supabase user without wallet — provisioning for user=${user!.id.slice(0, 8)}...`);
+      const wallet = await getOrCreateWallet(user!.id);
+      destination = wallet.publicKey;
+      console.log(`[claim/POST] Wallet provisioned: ${destination.slice(0, 8)}...`);
+    } catch (provErr: unknown) {
+      const msg = provErr instanceof Error ? provErr.message : String(provErr);
+      console.error("[claim/POST] Failed to provision wallet:", msg);
+      return NextResponse.json(
+        { error: "Failed to provision destination wallet. Please try again." },
+        { status: 500 }
+      );
+    }
+  }
 
   if (!destination) {
     return NextResponse.json(
-      { error: "destinationWallet is required." },
+      { error: "Destination wallet is required. Connect a Solana wallet." },
       { status: 400 }
     );
   }
@@ -111,22 +129,19 @@ export async function POST(
     );
   }
 
-  // Verificar Phantom signMessage (validação básica — publicKey confere com destinationWallet)
+  // Validação Phantom: signer deve ser o mesmo destino declarado (anti-replay)
   if (isPhantomAuth && !isSupabaseAuth) {
-    // Verificamos que o publicKey que assinou é o mesmo destino declarado
-    // (prevenção de replay: usuário não pode redirecionar claim para outra wallet)
     if (publicKey !== destination) {
       return NextResponse.json(
         { error: "Phantom public key must match destination wallet." },
         { status: 403 }
       );
     }
-    // Nota: validação criptográfica completa do Ed25519 da assinatura requer
-    // @solana/web3.js nacl — adicionada como proteção de produção quando disponível
   }
 
   // --- Resolver claim ---
   try {
+    console.log(`[claim/POST] Resolving claim id=${id} → destination=${destination.slice(0, 8)}...`);
     const result = await resolveClaim(id, destination);
 
     return NextResponse.json({
@@ -136,12 +151,13 @@ export async function POST(
       explorerUrl: `https://explorer.solana.com/tx/${result.txHash}?cluster=devnet`,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Claim failed.";
+    const errMessage = err instanceof Error ? err.message : "Claim failed.";
+    console.error(`[claim/POST] resolveClaim failed: ${errMessage}`);
     const status =
-      message.includes("already been redeemed") ? 409 :
-      message.includes("expired") ? 410 :
-      message.includes("not found") ? 404 : 500;
+      errMessage.includes("already been redeemed") ? 409 :
+      errMessage.includes("expired") ? 410 :
+      errMessage.includes("not found") ? 404 : 500;
 
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: errMessage }, { status });
   }
 }
