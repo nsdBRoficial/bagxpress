@@ -97,7 +97,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { orderId, amount, tokenMint, creatorWallet } = body;
+    const { orderId, amount, tokenMint, creatorWallet, phantomWallet } = body;
 
     // PT-BR: Validação básica dos campos obrigatórios
     // EN:    Basic validation of required fields
@@ -191,7 +191,7 @@ export async function POST(req: Request) {
         console.warn("[execute-buy] Falha ao resolver wallet real, usando efêmera:", message);
         keypair         = Keypair.generate();
         walletPublicKey = keypair.publicKey.toBase58();
-        isAnonymous     = true;
+        isAnonymous     = !phantomWallet;
         step("⚡", "Zero-UX", "Ephemeral key created for instant checkout", "info",
           "No wallet required · Maximum conversion for new users · " + walletPublicKey.slice(0, 8) + "..."
         );
@@ -199,9 +199,9 @@ export async function POST(req: Request) {
     } else {
       keypair         = Keypair.generate();
       walletPublicKey = keypair.publicKey.toBase58();
-      isAnonymous     = true;
+      isAnonymous     = !phantomWallet;
       step("⚡", "Zero-UX", "Ephemeral key created for instant checkout", "info",
-        "No wallet required · Anonymous session · " + walletPublicKey.slice(0, 8) + "..."
+        phantomWallet ? `Routing to Phantom: ${phantomWallet.slice(0, 8)}...` : "Anonymous session · " + walletPublicKey.slice(0, 8) + "..."
       );
     }
 
@@ -213,6 +213,7 @@ export async function POST(req: Request) {
 
     const swapResult = await executeSwap({
       keypair,
+      destinationWallet: phantomWallet ?? null,
       tokenMint:     tokenMint ?? null,
       creatorWallet: creatorWallet ?? null,
       amountUsd:     amountNum,
@@ -280,39 +281,58 @@ export async function POST(req: Request) {
     let claimId: string | null = null;
     let claimUrl: string | null = null;
 
-    if (isAnonymous && swapResult.success && swapResult.deliveredAmount > 0) {
-      // CRÍTICO: usar sempre BXP_TOKEN_MINT — é o token real entregue pelo swap.
-      // tokenMint do body é o creator token (pode não existir na Devnet) — NÃO usar para claim.
+    if (swapResult.success && swapResult.deliveredAmount > 0) {
       const bxpMint = process.env.BXP_TOKEN_MINT ?? "";
-      if (!bxpMint) {
-        console.error("[execute-buy][Trust Layer] BXP_TOKEN_MINT not configured — skipping claim creation");
-      } else {
-        console.log(`[execute-buy][Trust Layer] isAnonymous=true | deliveredAmount=${swapResult.deliveredAmount} | bxpMint=${bxpMint} | orderId=${orderId}`);
+      
+      if (phantomWallet) {
+        // Criar pseudo-claim para que o Dashboard consiga localizar a order do usuário Phantom
         try {
-          const claimResult = await createPendingClaim(
-            orderId,
-            keypair,
-            swapResult.deliveredAmount,
-            bxpMint
-          );
-          claimId  = claimResult.claimId;
-          claimUrl = claimResult.claimUrl;
-          console.log(`[execute-buy][Trust Layer] Claim created: ${claimId}`);
-          step(
-            "🔒",
-            "Trust Layer",
-            `BXP secured in claim vault`,
-            "success",
-            `Claim ID: ${claimId} | Expires in 30 days`,
-          );
-        } catch (claimErr: unknown) {
-          const msg = claimErr instanceof Error ? claimErr.message : String(claimErr);
-          console.error("[execute-buy][Trust Layer] createPendingClaim FAILED:", msg);
-          step("⚠️", "Trust Layer", `Claim vault creation failed: ${msg}`, "warning");
+          await admin.from("pending_claims").insert({
+            order_id: orderId,
+            wallet_pubkey: phantomWallet,
+            encrypted_secret: "phantom_direct",
+            encryption_iv: "phantom_direct",
+            amount: swapResult.deliveredAmount,
+            token_mint: bxpMint,
+            claimed: true,
+            claimed_by: phantomWallet,
+            claimed_at: new Date().toISOString()
+          });
+          console.log(`[execute-buy] Phantom tracking record created for ${phantomWallet}`);
+        } catch (e) {
+          console.error("[execute-buy] Error creating phantom tracking record:", e);
+        }
+      } else if (isAnonymous) {
+        if (!bxpMint) {
+          console.error("[execute-buy][Trust Layer] BXP_TOKEN_MINT not configured — skipping claim creation");
+        } else {
+          console.log(`[execute-buy][Trust Layer] isAnonymous=true | deliveredAmount=${swapResult.deliveredAmount} | bxpMint=${bxpMint} | orderId=${orderId}`);
+          try {
+            const claimResult = await createPendingClaim(
+              orderId,
+              keypair,
+              swapResult.deliveredAmount,
+              bxpMint
+            );
+            claimId  = claimResult.claimId;
+            claimUrl = claimResult.claimUrl;
+            console.log(`[execute-buy][Trust Layer] Claim created: ${claimId}`);
+            step(
+              "🔒",
+              "Trust Layer",
+              `BXP secured in claim vault`,
+              "success",
+              `Claim ID: ${claimId} | Expires in 30 days`,
+            );
+          } catch (claimErr: unknown) {
+            const msg = claimErr instanceof Error ? claimErr.message : String(claimErr);
+            console.error("[execute-buy][Trust Layer] createPendingClaim FAILED:", msg);
+            step("⚠️", "Trust Layer", `Claim vault creation failed: ${msg}`, "warning");
+          }
         }
       }
     } else {
-      console.log(`[execute-buy][Trust Layer] Skipped | isAnonymous=${isAnonymous} | success=${swapResult.success} | amount=${swapResult.deliveredAmount}`);
+      console.log(`[execute-buy][Trust Layer] Skipped | isAnonymous=${isAnonymous} | phantomWallet=${phantomWallet} | success=${swapResult.success}`);
     }
 
     // -----------------------------------------------------------------------

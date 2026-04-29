@@ -12,24 +12,44 @@
  * - Google OAuth (PKCE)
  * - Magic Link OTP
  */
-import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
-export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard";
+export async function GET(request: NextRequest) {
+  const requestUrl = new URL(request.url);
+  const code = requestUrl.searchParams.get("code");
+  const next = requestUrl.searchParams.get("next") ?? "/dashboard";
 
   // Sanitizar o `next` param para evitar open redirect
   const safePath = next.startsWith("/") ? next : "/dashboard";
 
   if (code) {
-    const supabase = await createSupabaseServerClient();
+    // Criar a resposta de redirect com antecedência para injetar os cookies nela
+    const response = NextResponse.redirect(new URL(safePath, request.url));
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              request.cookies.set(name, value);
+              response.cookies.set(name, value, options);
+            });
+          },
+        },
+      }
+    );
+
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
       console.log(`[auth/callback] Session exchanged OK → redirecting to ${safePath}`);
-      return NextResponse.redirect(`${origin}${safePath}`);
+      return response;
     }
 
     console.error("[auth/callback] Session exchange failed:", error.message);
@@ -39,6 +59,6 @@ export async function GET(request: Request) {
 
   // Em caso de erro, redireciona para home com o erro visível
   return NextResponse.redirect(
-    `${origin}/?error=auth_failed&error_description=Unable+to+complete+sign+in`
+    new URL("/?error=auth_failed&error_description=Unable+to+complete+sign+in", request.url)
   );
 }

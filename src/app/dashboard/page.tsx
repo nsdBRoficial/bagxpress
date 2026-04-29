@@ -135,15 +135,28 @@ export default function DashboardPage() {
           if (json.success) setWallet(json.wallet);
           else setWalletError(json.error);
         } else if (connected && publicKey) {
-          // Usa proxy via api ou mock visual simples para dashboard phantom-only
-          setWallet({
-            publicKey: publicKey,
-            network: "devnet",
-            balanceSol: 0, // Precisaria buscar on-chain aqui, mockando para focar no fluxo
-            createdAt: new Date().toISOString(),
-            solscanUrl: `https://solscan.io/account/${publicKey}?cluster=devnet`,
-            explorerUrl: `https://explorer.solana.com/address/${publicKey}?cluster=devnet`
-          });
+          try {
+            const { Connection, PublicKey } = await import("@solana/web3.js");
+            const conn = new Connection("https://api.devnet.solana.com");
+            const bal = await conn.getBalance(new PublicKey(publicKey));
+            setWallet({
+              publicKey: publicKey,
+              network: "devnet",
+              balanceSol: bal / 1e9,
+              createdAt: new Date().toISOString(),
+              solscanUrl: `https://solscan.io/account/${publicKey}?cluster=devnet`,
+              explorerUrl: `https://explorer.solana.com/address/${publicKey}?cluster=devnet`
+            });
+          } catch (err) {
+            setWallet({
+              publicKey: publicKey,
+              network: "devnet",
+              balanceSol: 0,
+              createdAt: new Date().toISOString(),
+              solscanUrl: `https://solscan.io/account/${publicKey}?cluster=devnet`,
+              explorerUrl: `https://explorer.solana.com/address/${publicKey}?cluster=devnet`
+            });
+          }
         }
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : String(e);
@@ -165,8 +178,9 @@ export default function DashboardPage() {
           const json = await res.json();
           if (json.success) setOrders(json.orders ?? []);
         } else if (connected && publicKey) {
-          // TODO: Fetch orders from API by wallet public key instead of user session
-          setOrders([]);
+          const res = await fetch(`/api/orders?wallet=${publicKey}`);
+          const json = await res.json();
+          if (json.success) setOrders(json.orders ?? []);
         }
       } finally {
         setLoadingOrders(false);

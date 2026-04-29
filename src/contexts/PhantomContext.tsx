@@ -68,7 +68,6 @@ export function PhantomProvider({ children }: { children: React.ReactNode }) {
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [isPhantomInstalled, setIsPhantomInstalled] = useState(false);
-  // Hydration guard: evita mismatch SSR/CSR
   const [mounted, setMounted] = useState(false);
 
   // Refs para event handlers (permite removeEventListener limpo)
@@ -97,16 +96,19 @@ export function PhantomProvider({ children }: { children: React.ReactNode }) {
         const pk = (newPublicKey as { toString: () => string }).toString();
         setPublicKey(pk);
         setConnected(true);
+        localStorage.setItem("phantom_auto_connect", "true");
       } else {
         // Conta removida/desconectada
         setPublicKey(null);
         setConnected(false);
+        localStorage.removeItem("phantom_auto_connect");
       }
     };
 
     const onDisconnect = () => {
       setPublicKey(null);
       setConnected(false);
+      localStorage.removeItem("phantom_auto_connect");
     };
 
     onAccountChangedRef.current = onAccountChanged as (...args: unknown[]) => void;
@@ -128,14 +130,26 @@ export function PhantomProvider({ children }: { children: React.ReactNode }) {
     let cleanupListeners: (() => void) | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const tryDetect = (attempt = 0) => {
+    const tryDetect = async (attempt = 0) => {
       const phantom = getPhantom();
 
       if (phantom) {
         setIsPhantomInstalled(true);
         cleanupListeners = attachListeners(phantom);
-        // Removida a tentativa silenciosa de connect({onlyIfTrusted: true})
-        // para evitar que a Phantom se sobreponha à sessão do Supabase sem ação explícita.
+        
+        // Auto-connect apenas se o usuário tiver conectado explicitamente antes (evita popup indesejado)
+        if (localStorage.getItem("phantom_auto_connect") === "true") {
+          try {
+            const resp = await phantom.connect({ onlyIfTrusted: true });
+            if (resp.publicKey) {
+              setPublicKey(resp.publicKey.toString());
+              setConnected(true);
+            }
+          } catch (err) {
+            console.warn("Phantom auto-connect failed:", err);
+            localStorage.removeItem("phantom_auto_connect");
+          }
+        }
       } else if (attempt < 3) {
         // Retry: extensão pode ainda estar injetando no window.solana
         retryTimer = setTimeout(() => tryDetect(attempt + 1), 500);
@@ -150,25 +164,26 @@ export function PhantomProvider({ children }: { children: React.ReactNode }) {
     };
   }, [getPhantom, attachListeners]);
 
-  const connect = useCallback(async () => {
-    const phantom = getPhantom();
-    if (!phantom) {
-      window.open("https://phantom.app/", "_blank");
-      return;
-    }
+  const connect = async () => {
+    if (connecting) return;
     try {
       setConnecting(true);
+      const phantom = getPhantom();
+      if (!phantom) {
+        window.open("https://phantom.app/", "_blank");
+        return;
+      }
       const resp = await phantom.connect();
       setPublicKey(resp.publicKey.toString());
       setConnected(true);
-      // Garante que listeners estão ativos após connect manual
+      localStorage.setItem("phantom_auto_connect", "true");
       attachListeners(phantom);
     } catch (err) {
-      console.warn("[Phantom] Connection rejected:", err);
+      console.error("Phantom connect error:", err);
     } finally {
       setConnecting(false);
     }
-  }, [getPhantom, attachListeners]);
+  };
 
   const disconnect = useCallback(async () => {
     const phantom = getPhantom();

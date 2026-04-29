@@ -44,6 +44,8 @@ import bs58 from "bs58";
 export interface SwapParams {
   /** Keypair da wallet do usuário para assinar */
   keypair: Keypair;
+  /** Wallet de destino final (opcional, útil quando o sign é feito por uma key temporária mas a entrega é para uma wallet conectada via extension) */
+  destinationWallet?: string | null;
   /** Token mint alvo (opcional — Bags/Jupiter o usam) */
   tokenMint?: string | null;
   /** Wallet do creator para royalties (opcional) */
@@ -444,11 +446,15 @@ class TreasuryBxpProvider implements SwapProvider {
 
       // PT-BR: Obtém/cria a ATA do usuário para o mint BXP (treasury paga o rent)
       // EN:    Gets/creates the user ATA for the BXP mint (treasury pays rent)
+      const destinationPubkey = params.destinationWallet
+        ? new PublicKey(params.destinationWallet)
+        : keypair.publicKey;
+
       const userAta = await getOrCreateAssociatedTokenAccount(
         connection,
         treasuryKeypair,   // payer do rent
         mintPubkey,
-        keypair.publicKey  // owner da conta
+        destinationPubkey  // owner da conta
       );
 
       const { blockhash } = await connection.getLatestBlockhash("confirmed");
@@ -468,7 +474,7 @@ class TreasuryBxpProvider implements SwapProvider {
         maxRetries: 3,
       });
 
-      console.log(`[treasury_transfer] ✅ ${bxpAmountToSend} BXP enviados para ${keypair.publicKey.toBase58().slice(0, 8)}... | TX: ${txHash.slice(0, 10)}...`);
+      console.log(`[treasury_transfer] ✅ ${bxpAmountToSend} BXP enviados para ${destinationPubkey.toBase58().slice(0, 8)}... | TX: ${txHash.slice(0, 10)}...`);
 
       return {
         success: true,

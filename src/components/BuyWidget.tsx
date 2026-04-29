@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
+import Link from "next/link";
 import {
   Fingerprint, Loader2, CheckCircle2, Ban, Zap,
   ExternalLink, Copy, Shield, Wallet, ArrowUpRight,
@@ -11,6 +12,7 @@ import confetti from "canvas-confetti";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { usePhantom } from "@/contexts/PhantomContext";
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
@@ -109,12 +111,13 @@ function CopyButton({ text }: { text: string }) {
 // ---------------------------------------------------------------------------
 
 function CheckoutForm({
-  amount, orderId, tokenMint, creatorWallet, onSuccess, onError, addLog, setParentState,
+  amount, orderId, tokenMint, creatorWallet, phantomWallet, onSuccess, onError, addLog, setParentState,
 }: {
   amount: number;
   orderId: string;
   tokenMint?: string | null;
   creatorWallet?: string | null;
+  phantomWallet?: string | null;
   onSuccess: (data: TxDetails) => void;
   onError: (err: string) => void;
   addLog: (msg: string, type: "info" | "success" | "error" | "warning", detail?: string, link?: string) => void;
@@ -137,6 +140,7 @@ function CheckoutForm({
           amount:  amt,
           tokenMint:     tokenMint ?? null,
           creatorWallet: creatorWallet ?? null,
+          phantomWallet: phantomWallet ?? null,
         }),
       });
 
@@ -271,6 +275,9 @@ interface BuyWidgetProps {
 
 export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
   const { user } = useAuth();
+  const { connected, publicKey } = usePhantom();
+  
+  const isAuthenticated = !!user || connected;
   const [state, setState] = useState<WidgetState>("idle");
   const [amount, setAmount] = useState<number>(50);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -298,6 +305,8 @@ export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
 
     if (user) {
       addLog("Loading your persistent wallet...", "info");
+    } else if (connected) {
+      addLog("Preparing route to Phantom Wallet...", "info");
     } else {
       addLog("Generating ephemeral passkey account...", "info");
     }
@@ -318,6 +327,7 @@ export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
           creatorWallet: creatorContext?.wallet ?? null,
           creatorHandle: creatorContext?.displayName ?? null,
           creatorRoyaltyPercent: creatorContext?.royaltyPercent ?? 0,
+          phantomWallet: connected ? publicKey : null,
         }),
       });
 
@@ -389,11 +399,11 @@ export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
         )} />
 
         {/* Session badge */}
-        {user && (
+        {isAuthenticated && (
           <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 rounded-full px-2.5 py-1">
             <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
             <span className="text-[10px] text-green-400 font-mono">
-              {user.email?.split("@")[0]}
+              {user?.email?.split("@")[0] || `Phantom: ${publicKey?.slice(0, 4)}...`}
             </span>
           </div>
         )}
@@ -487,7 +497,7 @@ export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
               </div>
 
               {/* Auth hint */}
-              {!user && (
+              {!isAuthenticated && (
                 <div className="flex items-center gap-2 text-xs text-gray-600 bg-white/3 rounded-xl p-3 border border-white/5">
                   <Shield className="w-3.5 h-3.5 text-gray-600 shrink-0" />
                   <span>
@@ -550,6 +560,7 @@ export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
                     orderId={orderId}
                     tokenMint={creatorContext?.tokenMint}
                     creatorWallet={creatorContext?.wallet}
+                    phantomWallet={connected ? publicKey : null}
                     setParentState={setState}
                     onSuccess={handleExecutionSuccess}
                     onError={handleError}
@@ -573,6 +584,7 @@ export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
                           amount,
                           tokenMint: creatorContext?.tokenMint ?? null,
                           creatorWallet: creatorContext?.wallet ?? null,
+                          phantomWallet: connected ? publicKey : null,
                         }),
                       })
                         .then((r) => r.json())
@@ -793,14 +805,14 @@ export default function BuyWidget({ creatorContext }: BuyWidgetProps = {}) {
                 )}
 
                 {/* Dashboard button */}
-                {user && (
-                  <a
+                {isAuthenticated && (
+                  <Link
                     href="/dashboard"
                     className="w-full py-3 rounded-xl bg-white/5 border border-white/15 text-white font-bold flex items-center justify-center gap-2 hover:bg-white/10 transition-colors"
                   >
                     <Wallet className="w-4 h-4" />
                     View in Dashboard
-                  </a>
+                  </Link>
                 )}
 
                 <button

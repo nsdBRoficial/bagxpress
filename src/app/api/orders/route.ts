@@ -6,15 +6,32 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function GET() {
+export async function GET(req: Request) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) {
+  const { searchParams } = new URL(req.url);
+  const phantomWallet = searchParams.get("wallet");
+
+  if (!user && !phantomWallet) {
     return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
   }
 
-  const { data: orders, error } = await supabase
+  let orderIdsToFetch: string[] = [];
+
+  if (phantomWallet) {
+    // Busca pseudo-claims da Phantom
+    const { data: claims } = await supabase
+      .from("pending_claims")
+      .select("order_id")
+      .eq("claimed_by", phantomWallet);
+
+    if (claims && claims.length > 0) {
+      orderIdsToFetch = claims.map((c) => c.order_id);
+    }
+  }
+
+  let query = supabase
     .from("orders")
     .select(`
       id,
@@ -35,8 +52,20 @@ export async function GET() {
         status,
         created_at
       )
-    `)
-    .eq("user_id", user.id)
+    `);
+
+  if (user && orderIdsToFetch.length > 0) {
+    query = query.or(`user_id.eq.${user.id},id.in.(${orderIdsToFetch.join(",")})`);
+  } else if (user) {
+    query = query.eq("user_id", user.id);
+  } else if (orderIdsToFetch.length > 0) {
+    query = query.in("id", orderIdsToFetch);
+  } else {
+    // Phantom wallet enviada, mas sem orders associadas
+    return NextResponse.json({ success: true, orders: [] });
+  }
+
+  const { data: orders, error } = await query
     .order("created_at", { ascending: false })
     .limit(50);
 

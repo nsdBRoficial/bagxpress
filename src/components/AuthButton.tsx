@@ -12,6 +12,7 @@
  */
 
 import { useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { usePhantom } from "@/contexts/PhantomContext";
@@ -123,14 +124,14 @@ function PhantomNavButton() {
 
               {/* Ações do Menu */}
               <div className="p-2 flex flex-col gap-1">
-                <a
+                <Link
                   href="/dashboard"
                   onClick={() => setShowDropdown(false)}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-200 hover:text-white hover:bg-white/10 transition-colors"
                 >
                   <User className="w-4 h-4 text-cyan-400" />
                   Go to Dashboard
-                </a>
+                </Link>
 
                 <button
                   onClick={handleCopy}
@@ -230,7 +231,7 @@ export default function AuthButton() {
   if (user) {
     return (
       <div className="flex items-center gap-2">
-        <a
+        <Link
           href="/dashboard"
           className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-sm text-white"
         >
@@ -240,7 +241,7 @@ export default function AuthButton() {
           <span className="max-w-[120px] truncate">
             {user.email?.split("@")[0]}
           </span>
-        </a>
+        </Link>
         {/* Phantom também conectada? Mostra botão */}
         {connected && publicKey && <PhantomNavButton />}
         <button

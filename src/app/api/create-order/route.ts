@@ -27,6 +27,7 @@ export async function POST(req: Request) {
       creatorWallet,
       creatorHandle,
       creatorRoyaltyPercent,
+      phantomWallet,
     } = body;
 
     if (!amount) {
@@ -55,6 +56,7 @@ export async function POST(req: Request) {
             user_id: userId ?? "anonymous",
             token_mint: tokenMint ?? "",
             creator_handle: creatorHandle ?? "",
+            phantom_wallet: phantomWallet ?? "",
           },
         });
         stripePaymentIntentId = paymentIntent.id;
