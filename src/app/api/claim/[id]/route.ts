@@ -141,8 +141,8 @@ export async function POST(
 
   // --- Resolver claim ---
   try {
-    console.log(`[claim/POST] Resolving claim id=${id} → destination=${destination.slice(0, 8)}...`);
-    const result = await resolveClaim(id, destination);
+    console.log(`[claim/POST] Resolving claim id=${id} → destination=${destination.slice(0, 8)}... userId=${user?.id ?? "none"}`);
+    const result = await resolveClaim(id, destination, user?.id ?? null);
 
     return NextResponse.json({
       success: true,

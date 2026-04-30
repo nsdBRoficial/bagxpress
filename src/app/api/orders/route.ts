@@ -4,16 +4,21 @@
  * Suporta sessão Supabase (?wallet não necessário) ou Phantom wallet (?wallet=PUBLIC_KEY).
  *
  * IDENTITY MAPPING:
- *   pending_claims.order_id  → "pi_..." (stripe payment intent ID)
- *   orders.stripe_payment_intent_id → "pi_..." ← filtro correto
+ *   pending_claims.order_id  → stripe_payment_intent_id (ex: "pi_...")
+ *   orders.stripe_payment_intent_id → filtro correto
  *   orders.id                → UUID (NÃO usar para busca via claims)
+ *
+ * ACESSO: usa service role key para bypassar RLS — apenas server-side.
  */
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 
 export async function GET(req: Request) {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Service role: bypassa RLS para garantir acesso confiável aos dados
+  const supabaseAdmin = createSupabaseAdminClient();
+  // Sessão auth: usa anon client para ler cookies do usuário
+  const supabaseAuth = await createSupabaseServerClient();
+  const { data: { user } } = await supabaseAuth.auth.getUser();
 
   const { searchParams } = new URL(req.url);
   const phantomWallet = searchParams.get("wallet");
@@ -28,8 +33,8 @@ export async function GET(req: Request) {
   let paymentIntentIds: string[] = [];
 
   if (phantomWallet) {
-    // Busca claims associados à wallet Phantom
-    const { data: claims, error: claimsError } = await supabase
+    // FASE 1: usa admin client para bypassar RLS na leitura de pending_claims
+    const { data: claims, error: claimsError } = await supabaseAdmin
       .from("pending_claims")
       .select("order_id")
       .eq("claimed_by", phantomWallet);
@@ -40,15 +45,16 @@ export async function GET(req: Request) {
     // RAW: inspeciona o que veio do banco antes de qualquer transformação
     const rawIds = claims?.map((c) => c.order_id).filter(Boolean);
     console.log("[orders][debug] paymentIntentIds RAW:", rawIds);
-    console.log("[orders][debug] typeof:", typeof rawIds);
-    console.log("[orders][debug] length:", rawIds?.length);
+    console.log("[orders][debug] typeof rawIds:", typeof rawIds);
+    console.log("[orders][debug] length rawIds:", rawIds?.length);
 
-    // Sanitiza: garante string, sem espaços, apenas pi_...
+    // FASE 2 FIX: NÃO filtrar por startsWith("pi_") — order_id pode ter outros formatos
+    // Apenas garantir que é string válida e não vazia
     const cleanIds = rawIds
       ?.map((id) => String(id).trim())
-      .filter((id) => id.startsWith("pi_"));
+      .filter((id) => id.length > 0);
 
-    console.log("[orders][debug] cleanIds:", cleanIds);
+    console.log("[orders][debug] cleanIds (sem filtro startsWith):", cleanIds);
 
     if (cleanIds && cleanIds.length > 0) {
       paymentIntentIds = cleanIds;
@@ -57,7 +63,8 @@ export async function GET(req: Request) {
     console.log("[orders][debug] paymentIntentIds final:", paymentIntentIds);
   }
 
-  let query = supabase
+  // FASE 1: usa admin client para a query em orders (bypassa RLS)
+  let query = supabaseAdmin
     .from("orders")
     .select(`
       id,

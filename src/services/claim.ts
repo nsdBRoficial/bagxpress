@@ -204,10 +204,19 @@ export async function getClaimById(id: string): Promise<PendingClaimPublic | nul
 /**
  * Resolve um claim: descriptografa a wallet transitória e transfere os tokens
  * SPL para a wallet destino. Marca o claim como resgatado.
+ *
+ * FASE 3 — Identity Binding:
+ * Se o usuário estiver autenticado via Supabase Auth, vincula o user_id
+ * à order correspondente (apenas quando user_id é null).
+ *
+ * @param id               UUID do pending_claim
+ * @param destinationWallet Wallet destino para os tokens
+ * @param userId           (opcional) Supabase Auth user.id para identity binding
  */
 export async function resolveClaim(
   id: string,
-  destinationWallet: string
+  destinationWallet: string,
+  userId?: string | null
 ): Promise<ResolveClaimResult> {
   console.log(`\n[claim:resolveClaim] ========== START ==========`);
   console.log(`[claim:resolveClaim] claim_id=${id}`);
@@ -387,6 +396,28 @@ export async function resolveClaim(
   } else {
     console.log(`[claim:resolveClaim] DB updated: claimed=true`);
   }
+
+  // --- FASE 3: Identity Binding ---
+  // Vincula user_id à order correspondente se o usuário estiver autenticado.
+  // Usa WHERE user_id IS NULL para não sobrescrever vínculos existentes.
+  if (userId) {
+    console.log(`[identity][bind] Iniciando binding: user_id=${userId} | order_id=${claim.order_id}`);
+    const { error: bindError } = await supabase
+      .from("orders")
+      .update({ user_id: userId })
+      .eq("stripe_payment_intent_id", claim.order_id)
+      .is("user_id", null); // NÃO sobrescreve user_id existente
+
+    if (bindError) {
+      // Não crítico: claim já foi confirmado
+      console.error(`[identity][bind] WARN: binding falhou (não crítico): ${bindError.message}`);
+    } else {
+      console.log(`[identity][bind] order linked to user | user_id=${userId} | order_id=${claim.order_id}`);
+    }
+  } else {
+    console.log(`[identity][bind] userId não fornecido — identity binding ignorado`);
+  }
+  // --- fim identity binding ---
 
   console.log(`[claim:resolveClaim] ========== END ==========\n`);
   return { txHash, claimed_by: destinationWallet };
