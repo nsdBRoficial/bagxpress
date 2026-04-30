@@ -26,6 +26,34 @@ import {
 import { encrypt, decrypt } from "@/lib/crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
+function base64ToUint8Array(base64: string): Uint8Array {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function uint8ArrayToBase64(buffer: ArrayBuffer | Uint8Array): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+function hexToUint8Array(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+  }
+  return bytes;
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -104,7 +132,7 @@ export async function createPendingClaim(
   console.log(`[claim] Encrypting keypair for wallet ${walletPubkey.slice(0, 8)}...`);
 
   // 3. Serializar e criptografar secret key
-  const secretKeyB64 = Buffer.from(keypair.secretKey).toString("base64");
+  const secretKeyB64 = uint8ArrayToBase64(keypair.secretKey);
   let encrypted: string;
   let iv: string;
   try {
@@ -218,7 +246,7 @@ export async function resolveClaim(
     encrypted: claim.encrypted_secret,
     iv: claim.encryption_iv,
   });
-  const secretKey = Buffer.from(secretKeyB64, "base64");
+  const secretKey = base64ToUint8Array(secretKeyB64);
   const sourceKeypair = Keypair.fromSecretKey(secretKey);
 
   if (sourceKeypair.publicKey.toBase58() !== claim.wallet_pubkey) {
@@ -240,13 +268,17 @@ export async function resolveClaim(
   // 5. Resolver Treasury Keypair
   console.log(`[claim:resolveClaim] Step 5: Resolving treasury keypair...`);
   const secretRaw = process.env.FEE_PAYER_SECRET_KEY!.replace(/['"]/g, "").trim();
-  let secretBytes: Buffer | Uint8Array;
+  let secretBytes: Uint8Array;
   if (/^[0-9a-fA-F]{64,}$/.test(secretRaw)) {
-    secretBytes = Buffer.from(secretRaw, "hex");
+    secretBytes = hexToUint8Array(secretRaw);
   } else {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const bs58 = require("bs58");
-    secretBytes = bs58.decode(secretRaw);
+    if (bs58.default && typeof bs58.default.decode === "function") {
+      secretBytes = bs58.default.decode(secretRaw);
+    } else {
+      secretBytes = bs58.decode(secretRaw);
+    }
   }
   const treasuryKeypair = Keypair.fromSecretKey(secretBytes);
   console.log(`[claim:resolveClaim] Treasury pubkey=${treasuryKeypair.publicKey.toBase58()}`);

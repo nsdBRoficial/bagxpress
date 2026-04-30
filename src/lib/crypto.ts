@@ -14,6 +14,34 @@
 const ALGORITHM = "AES-GCM";
 const KEY_LENGTH = 256;
 
+function hexToUint8Array(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+  }
+  return bytes;
+}
+
+function base64ToUint8Array(base64: string): Uint8Array {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function uint8ArrayToBase64(buffer: ArrayBuffer | Uint8Array): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 /**
  * Deriva a CryptoKey a partir do ENCRYPTION_SECRET do ambiente.
  * A chave deve ter exatamente 32 bytes (64 chars hex).
@@ -23,7 +51,7 @@ async function getMasterKey(): Promise<CryptoKey> {
   if (!secret) throw new Error("ENCRYPTION_SECRET not configured");
 
   // Converte hex string para bytes
-  const keyBytes = Buffer.from(secret.padEnd(64, "0").slice(0, 64), "hex");
+  const keyBytes = hexToUint8Array(secret.padEnd(64, "0").slice(0, 64));
 
   return crypto.subtle.importKey(
     "raw",
@@ -55,8 +83,8 @@ export async function encrypt(plaintext: string): Promise<EncryptedData> {
   );
 
   return {
-    encrypted: Buffer.from(ciphertext).toString("base64"),
-    iv: Buffer.from(iv).toString("base64"),
+    encrypted: uint8ArrayToBase64(ciphertext),
+    iv: uint8ArrayToBase64(iv),
   };
 }
 
@@ -66,8 +94,8 @@ export async function encrypt(plaintext: string): Promise<EncryptedData> {
  */
 export async function decrypt(data: EncryptedData): Promise<string> {
   const key = await getMasterKey();
-  const iv = Buffer.from(data.iv, "base64");
-  const ciphertext = Buffer.from(data.encrypted, "base64");
+  const iv = base64ToUint8Array(data.iv);
+  const ciphertext = base64ToUint8Array(data.encrypted);
 
   const decrypted = await crypto.subtle.decrypt(
     { name: ALGORITHM, iv },
@@ -75,5 +103,12 @@ export async function decrypt(data: EncryptedData): Promise<string> {
     ciphertext
   );
 
-  return new TextDecoder().decode(decrypted);
+  console.log("[claim][debug] decrypted type:", typeof decrypted);
+  console.log("[claim][debug] is ArrayBuffer:", decrypted instanceof ArrayBuffer);
+  
+  if (!(decrypted instanceof ArrayBuffer) && !(decrypted instanceof Uint8Array)) {
+    throw new Error("Decryption did not return ArrayBuffer or Uint8Array");
+  }
+
+  return new TextDecoder("utf-8").decode(decrypted);
 }
