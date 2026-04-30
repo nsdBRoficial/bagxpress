@@ -110,6 +110,8 @@ export default function DashboardPage() {
   const { user, loading: authLoading, signOut } = useAuth();
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [totalSpent, setTotalSpent] = useState(0);
+  const [totalPurchases, setTotalPurchases] = useState(0);
   const [loadingWallet, setLoadingWallet] = useState(true);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [walletError, setWalletError] = useState<string | null>(null);
@@ -173,14 +175,24 @@ export default function DashboardPage() {
     const load = async () => {
       try {
         setLoadingOrders(true);
-        if (user) {
-          const res = await fetch("/api/orders");
-          const json = await res.json();
-          if (json.success) setOrders(json.orders ?? []);
-        } else if (connected && publicKey) {
-          const res = await fetch(`/api/orders?wallet=${publicKey}`);
-          const json = await res.json();
-          if (json.success) setOrders(json.orders ?? []);
+        const url = connected && publicKey && !user
+          ? `/api/orders?wallet=${publicKey}`
+          : "/api/orders";
+
+        console.log("[dashboard] wallet query:", connected && publicKey ? publicKey : "(supabase session)");
+
+        const res = await fetch(url);
+        const json = await res.json();
+
+        if (json.success) {
+          const fetchedOrders = json.orders ?? [];
+          setOrders(fetchedOrders);
+          // Prioriza métricas calculadas no backend (mais confiável)
+          setTotalSpent(typeof json.totalSpent === "number" ? json.totalSpent : fetchedOrders.reduce((s: number, o: Order) => s + Number(o.amount_usd ?? 0), 0));
+          setTotalPurchases(typeof json.totalPurchases === "number" ? json.totalPurchases : fetchedOrders.length);
+          console.log("[dashboard] orders retornadas:", fetchedOrders.length, "| totalSpent: $" + (json.totalSpent ?? 0).toFixed(2));
+        } else {
+          console.warn("[dashboard] erro ao carregar orders:", json.error);
         }
       } finally {
         setLoadingOrders(false);
@@ -197,8 +209,9 @@ export default function DashboardPage() {
     );
   }
 
-  const totalSpent = orders.reduce((sum, o) => sum + Number(o.amount_usd), 0);
-  const completedOrders = orders.filter((o) => o.status === "completed").length;
+  // totalSpent e totalPurchases são primariamente calculados no backend (mais confiável)
+  // Fallback local usado apenas se backend não retornar as métricas
+  const completedOrders = orders.filter((o) => o.status === "completed" || o.status === "confirmed").length;
   const realTxCount = orders.filter((o) =>
     o.transactions?.[0]?.is_real_tx
   ).length;
@@ -245,7 +258,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-3 gap-4 mb-6">
           {[
             { icon: TrendingUp, label: "Total Spent", value: `$${totalSpent.toFixed(2)}`, color: "text-[var(--color-brand-secondary)]" },
-            { icon: CheckCircle2, label: "Purchases", value: completedOrders.toString(), color: "text-green-400" },
+            { icon: CheckCircle2, label: "Purchases", value: totalPurchases.toString(), color: "text-green-400" },
             { icon: ShieldCheck, label: "On-Chain Txs", value: realTxCount.toString(), color: "text-[var(--color-brand-primary)]" },
           ].map(({ icon: Icon, label, value, color }, i) => (
             <motion.div
