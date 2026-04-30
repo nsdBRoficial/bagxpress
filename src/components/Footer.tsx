@@ -10,6 +10,9 @@ export default function Footer() {
           <span className="font-geist font-bold text-xl tracking-tight text-white opacity-50 group-hover:opacity-80 transition-opacity">BagxPress</span>
           <span className="text-xs text-white/20">© 2026</span>
         </div>
+        <div className="text-xs text-gray-600 font-mono text-center">
+          v2.0 — Hackathon Winner Build
+        </div>
 
         <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-[var(--color-text-secondary)]">
           <a href="https://github.com/nsdBRoficial/bagxpress" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>

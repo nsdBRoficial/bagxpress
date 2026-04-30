@@ -46,6 +46,10 @@ export const metadata: Metadata = {
   }
 };
 
+// PT-BR: Log de versão emitido no cold start do servidor
+// EN: Version log emitted on server cold start
+console.log("[APP] Running v2.0 Winner Build — BagxPress Hackathon Submission");
+
 export default function RootLayout({
   children,
 }: Readonly<{

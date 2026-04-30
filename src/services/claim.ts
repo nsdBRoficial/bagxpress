@@ -1,19 +1,26 @@
 /**
  * src/services/claim.ts
- * MISSÃO V11 — Zero UX Trust Layer
+ * v2.0 — Winner Hackathon Build
  *
- * Gerencia o ciclo de vida de pending_claims:
- * - Criar claim criptografado para compras anônimas
- * - Resolver claim (transferir BXP para wallet destino)
- * - Consultar estado público do claim
+ * PT-BR: Gerencia o ciclo de vida de pending_claims.
+ * EN: Manages the lifecycle of pending_claims.
  *
- * SEGURANÇA:
- * - Private key nunca é logada ou exposta via API
- * - AES-256-GCM via lib/crypto.ts (padrão existente no projeto)
- * - Double-claim bloqueado via validação atômica no DB
- * - Expiração de 30 dias enforçada em resolveClaim
+ * PT-BR: Fluxo principal:
+ * EN: Main flow:
+ * - PT-BR: Criar claim criptografado para compras anônimas
+ * - EN: Create encrypted claim for anonymous purchases
+ * - PT-BR: Resolver claim (transferir BXP para wallet destino)
+ * - EN: Resolve claim (transfer BXP to destination wallet)
+ * - PT-BR: Identity binding: vincula order ao usuário autenticado
+ * - EN: Identity binding: links order to authenticated user
  *
- * LOGS SERVER: Todos os eventos emitem [claim] prefixed logs para diagnóstico.
+ * SEGURANÇA / SECURITY:
+ * - PT-BR: Private key nunca é logada ou exposta via API
+ * - EN: Private key is never logged or exposed via API
+ * - PT-BR: AES-256-GCM via lib/crypto.ts
+ * - EN: AES-256-GCM via lib/crypto.ts
+ * - PT-BR: Double-claim bloqueado via validação atômica no DB
+ * - EN: Double-claim blocked via atomic DB validation
  */
 
 import { Keypair, Connection, PublicKey, Transaction } from "@solana/web3.js";
@@ -117,10 +124,12 @@ export async function createPendingClaim(
 ): Promise<CreateClaimResult> {
   console.log(`[claim] createPendingClaim called | orderId=${orderId} | amount=${amount} | mint=${tokenMint}`);
 
-  // 1. Validar env vars
+  // PT-BR: 1. Valida variáveis de ambiente obrigatórias
+  // EN: 1. Validate required environment variables
   assertEnvVars();
 
-  // 2. Validar inputs
+  // PT-BR: 2. Valida inputs antes de qualquer operação
+  // EN: 2. Validate inputs before any operation
   if (!orderId || !tokenMint) {
     throw new Error(`[claim] Invalid inputs: orderId=${orderId} tokenMint=${tokenMint}`);
   }
@@ -398,8 +407,10 @@ export async function resolveClaim(
   }
 
   // --- FASE 3: Identity Binding ---
-  // Vincula user_id à order correspondente se o usuário estiver autenticado.
-  // Usa WHERE user_id IS NULL para não sobrescrever vínculos existentes.
+  // PT-BR: Vincula user_id à order correspondente se o usuário estiver autenticado.
+  // EN: Binds user_id to the corresponding order if the user is authenticated.
+  // PT-BR: Usa WHERE user_id IS NULL para não sobrescrever vínculos existentes.
+  // EN: Uses WHERE user_id IS NULL to avoid overwriting existing bindings.
   if (userId) {
     console.log(`[identity][bind] Iniciando binding: user_id=${userId} | order_id=${claim.order_id}`);
     const { error: bindError } = await supabase

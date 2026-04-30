@@ -1,22 +1,30 @@
 /**
  * GET /api/orders
- * Retorna as orders e transações do usuário autenticado.
- * Suporta sessão Supabase (?wallet não necessário) ou Phantom wallet (?wallet=PUBLIC_KEY).
+ * v2.0 — Winner Hackathon Build
+ *
+ * PT-BR: Retorna as orders e transações do usuário autenticado.
+ * EN: Returns the authenticated user's orders and transactions.
+ *
+ * PT-BR: Suporta sessão Supabase ou Phantom wallet (?wallet=PUBLIC_KEY).
+ * EN: Supports Supabase session or Phantom wallet (?wallet=PUBLIC_KEY).
  *
  * IDENTITY MAPPING:
- *   pending_claims.order_id  → stripe_payment_intent_id (ex: "pi_...")
- *   orders.stripe_payment_intent_id → filtro correto
- *   orders.id                → UUID (NÃO usar para busca via claims)
+ *   pending_claims.order_id  → stripe_payment_intent_id
+ *   orders.stripe_payment_intent_id → filtro correto / correct filter
+ *   orders.id                → UUID (NÃO usar para busca via claims / do NOT use for claims lookup)
  *
- * ACESSO: usa service role key para bypassar RLS — apenas server-side.
+ * PT-BR: Usa service role key para bypassar RLS — apenas server-side.
+ * EN: Uses service role key to bypass RLS — server-side only.
  */
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 
 export async function GET(req: Request) {
-  // Service role: bypassa RLS para garantir acesso confiável aos dados
+  // PT-BR: Admin client bypassa RLS — nunca exposto ao cliente
+  // EN: Admin client bypasses RLS — never exposed to the client
   const supabaseAdmin = createSupabaseAdminClient();
-  // Sessão auth: usa anon client para ler cookies do usuário
+  // PT-BR: Auth client para ler cookies de sessão do usuário
+  // EN: Auth client to read user session cookies
   const supabaseAuth = await createSupabaseServerClient();
   const { data: { user } } = await supabaseAuth.auth.getUser();
 

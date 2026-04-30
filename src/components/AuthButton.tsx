@@ -2,13 +2,16 @@
 
 /**
  * AuthButton — Botão de autenticação unificado.
+ * v2.0 — Winner Hackathon Build
  *
- * V11.5 Changes:
- * - Modal redesenhado com 5 opções de login (Google, Email, Phantom, Guest, Passkey)
- * - Fix: estado Phantom na navbar renderiza corretamente após connect
- * - Fix: close do modal acontece somente após confirmação do connect
- * - Phantom dropdown com opção de disconnect
- * - Hydration safe: não renderiza estado de wallet antes do mount
+ * Fluxos ativos:
+ *   - Phantom Wallet (fluxo principal)
+ *   - Magic Link / Email (fallback funcional)
+ *   - Guest (permitido, claim posterior)
+ *
+ * Fluxos desabilitados (SOON):
+ *   - Google OAuth (em breve)
+ *   - Passkey / WebAuthn (em breve)
  */
 
 import { useState } from "react";
@@ -409,23 +412,22 @@ export default function AuthButton() {
 
                     <div className="flex flex-col gap-2.5">
 
-                      {/* ── GOOGLE ── */}
-                      <button
-                        id="auth-google-btn"
-                        onClick={handleGoogle}
-                        disabled={googleLoading}
-                        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white hover:bg-gray-100 transition-colors group disabled:opacity-60"
+                      {/* ── GOOGLE (SOON) ── */}
+                      {/* PT-BR: Google Auth temporariamente desabilitado neste release */}
+                      {/* EN: Google Auth temporarily disabled in this release */}
+                      <div
+                        title="Coming soon"
+                        aria-disabled="true"
+                        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white/30 cursor-not-allowed opacity-40 select-none"
                       >
-                        {googleLoading ? (
-                          <Loader2 className="w-5 h-5 animate-spin text-gray-600" />
-                        ) : (
-                          <GoogleIcon size={20} />
-                        )}
+                        <GoogleIcon size={20} />
                         <span className="text-sm font-semibold text-gray-900 flex-1 text-left">
                           Continue with Google
                         </span>
-                        <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
-                      </button>
+                        <span className="text-[9px] font-bold uppercase tracking-wider bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">
+                          SOON
+                        </span>
+                      </div>
 
                       {/* ── EMAIL MAGIC LINK ── */}
                       <button
@@ -486,9 +488,10 @@ export default function AuthButton() {
                       </button>
 
                       {/* ── PASSKEY (COMING SOON) ── */}
-                      <button
-                        disabled
-                        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white/2 border border-white/5 cursor-not-allowed opacity-50"
+                      <div
+                        title="Coming soon"
+                        aria-disabled="true"
+                        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white/2 border border-white/5 cursor-not-allowed opacity-40 select-none"
                       >
                         <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
                           <Fingerprint className="w-4 h-4 text-gray-600" />
@@ -498,9 +501,9 @@ export default function AuthButton() {
                           <p className="text-[10px] text-gray-700">WebAuthn biometric</p>
                         </div>
                         <span className="text-[9px] font-bold uppercase tracking-wider bg-white/8 text-gray-500 px-2 py-0.5 rounded-full">
-                          Soon
+                          SOON
                         </span>
-                      </button>
+                      </div>
                     </div>
 
                     <p className="text-center text-[10px] text-gray-700 mt-6">

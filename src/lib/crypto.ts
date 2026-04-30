@@ -1,14 +1,20 @@
 /**
  * src/lib/crypto.ts
- * Criptografia AES-256-GCM para proteger private keys de wallets Solana.
+ * v2.0 — Winner Hackathon Build
  *
- * SEGURANÇA:
- * - Usa WebCrypto API nativa (Node.js 18+) — sem dependências externas
- * - Cada operação gera um IV aleatório único de 12 bytes
- * - A chave mestre (ENCRYPTION_SECRET) nunca é exposta no cliente
- * - Dados criptografados são inúteis sem a chave mestre
+ * PT-BR: Criptografia AES-256-GCM para proteger private keys de wallets Solana.
+ * EN: AES-256-GCM encryption to protect Solana wallet private keys.
+ *
+ * SEGURANÇA / SECURITY:
+ * - PT-BR: Usa WebCrypto API nativa (Node.js 18+) — sem dependências externas
+ * - EN: Uses native WebCrypto API (Node.js 18+) — no external dependencies
+ * - PT-BR: Cada operação gera um IV aleatório único de 12 bytes
+ * - EN: Each operation generates a unique random 12-byte IV
+ * - PT-BR: A chave mestre (ENCRYPTION_SECRET) nunca é exposta no cliente
+ * - EN: The master key (ENCRYPTION_SECRET) is never exposed client-side
  *
  * NUNCA use estas funções em client components — apenas server-side.
+ * NEVER use these functions in client components — server-side only.
  */
 
 const ALGORITHM = "AES-GCM";
@@ -110,9 +116,8 @@ export async function decrypt(data: EncryptedData): Promise<string> {
     toPureArrayBuffer(ciphertextBytes)
   );
 
-  console.log("[claim][debug] decrypted type:", typeof decrypted);
-  console.log("[claim][debug] is ArrayBuffer:", decrypted instanceof ArrayBuffer);
-  
+  // PT-BR: Descriptografa e retorna a string UTF-8
+  // EN: Decrypt and return UTF-8 string
   if (!(decrypted instanceof ArrayBuffer)) {
     throw new Error("Decryption did not return ArrayBuffer");
   }
