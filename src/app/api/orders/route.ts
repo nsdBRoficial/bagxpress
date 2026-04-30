@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const phantomWallet = searchParams.get("wallet");
 
-  console.log("[dashboard] wallet query:", phantomWallet ?? "(supabase session)");
+  console.log("[orders][debug] wallet:", phantomWallet ?? "(supabase session)");
 
   if (!user && !phantomWallet) {
     return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
@@ -29,17 +29,32 @@ export async function GET(req: Request) {
 
   if (phantomWallet) {
     // Busca claims associados à wallet Phantom
-    const { data: claims } = await supabase
+    const { data: claims, error: claimsError } = await supabase
       .from("pending_claims")
       .select("order_id")
       .eq("claimed_by", phantomWallet);
 
-    if (claims && claims.length > 0) {
-      // pending_claims.order_id contém "pi_..." (stripe payment intent IDs)
-      paymentIntentIds = claims.map((c) => c.order_id);
+    console.log("[orders][debug] claims encontrados:", claims);
+    if (claimsError) console.error("[orders][debug] claimsError:", claimsError.message);
+
+    // RAW: inspeciona o que veio do banco antes de qualquer transformação
+    const rawIds = claims?.map((c) => c.order_id).filter(Boolean);
+    console.log("[orders][debug] paymentIntentIds RAW:", rawIds);
+    console.log("[orders][debug] typeof:", typeof rawIds);
+    console.log("[orders][debug] length:", rawIds?.length);
+
+    // Sanitiza: garante string, sem espaços, apenas pi_...
+    const cleanIds = rawIds
+      ?.map((id) => String(id).trim())
+      .filter((id) => id.startsWith("pi_"));
+
+    console.log("[orders][debug] cleanIds:", cleanIds);
+
+    if (cleanIds && cleanIds.length > 0) {
+      paymentIntentIds = cleanIds;
     }
 
-    console.log("[dashboard] orderIds encontrados:", paymentIntentIds);
+    console.log("[orders][debug] paymentIntentIds final:", paymentIntentIds);
   }
 
   let query = supabase
@@ -74,8 +89,8 @@ export async function GET(req: Request) {
   } else if (user) {
     query = query.eq("user_id", user.id);
   } else if (paymentIntentIds.length > 0) {
-    // Apenas Phantom wallet: filtra via stripe_payment_intent_id
-    // FIX CRÍTICO: era query.in("id", ...) → mismatch UUID vs pi_...
+    // Apenas Phantom wallet: filtra via stripe_payment_intent_id (cleanIds já sanitizados)
+    console.log("[orders][debug] executando query.in stripe_payment_intent_id com:", paymentIntentIds);
     query = query.in("stripe_payment_intent_id", paymentIntentIds);
   } else {
     // Phantom wallet enviada, mas sem claims associados
@@ -97,13 +112,15 @@ export async function GET(req: Request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 
+  console.log("[orders][debug] orders result:", orders);
+
   const result = orders ?? [];
 
   // Calcula métricas agregadas no backend
   const totalSpent = result.reduce((sum, o) => sum + Number(o.amount_usd ?? 0), 0);
   const totalPurchases = result.length;
 
-  console.log("[dashboard] orders retornadas:", totalPurchases, "| totalSpent: $" + totalSpent.toFixed(2));
+  console.log("[orders][debug] orders retornadas:", totalPurchases, "| totalSpent: $" + totalSpent.toFixed(2));
 
   return NextResponse.json({
     success: true,
