@@ -22,6 +22,12 @@ function hexToUint8Array(hex: string): Uint8Array {
   return bytes;
 }
 
+function toPureArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  return buffer;
+}
+
 function base64ToUint8Array(base64: string): Uint8Array {
   const binaryString = atob(base64);
   const len = binaryString.length;
@@ -50,12 +56,13 @@ async function getMasterKey(): Promise<CryptoKey> {
   const secret = process.env.ENCRYPTION_SECRET;
   if (!secret) throw new Error("ENCRYPTION_SECRET not configured");
 
-  // Converte hex string para bytes
+  // Converte hex string para bytes e garante ArrayBuffer puro (não SharedArrayBuffer)
   const keyBytes = hexToUint8Array(secret.padEnd(64, "0").slice(0, 64));
+  const keyBuffer = toPureArrayBuffer(keyBytes);
 
   return crypto.subtle.importKey(
     "raw",
-    keyBytes.buffer,
+    keyBuffer,
     { name: ALGORITHM, length: KEY_LENGTH },
     false,
     ["encrypt", "decrypt"]
@@ -77,9 +84,9 @@ export async function encrypt(plaintext: string): Promise<EncryptedData> {
   const encoded = new TextEncoder().encode(plaintext);
 
   const ciphertext = await crypto.subtle.encrypt(
-    { name: ALGORITHM, iv },
+    { name: ALGORITHM, iv: toPureArrayBuffer(iv) },
     key,
-    encoded
+    toPureArrayBuffer(encoded)
   );
 
   return {
@@ -94,20 +101,20 @@ export async function encrypt(plaintext: string): Promise<EncryptedData> {
  */
 export async function decrypt(data: EncryptedData): Promise<string> {
   const key = await getMasterKey();
-  const iv = base64ToUint8Array(data.iv);
-  const ciphertext = base64ToUint8Array(data.encrypted);
+  const ivBytes = base64ToUint8Array(data.iv);
+  const ciphertextBytes = base64ToUint8Array(data.encrypted);
 
   const decrypted = await crypto.subtle.decrypt(
-    { name: ALGORITHM, iv },
+    { name: ALGORITHM, iv: toPureArrayBuffer(ivBytes) },
     key,
-    ciphertext
+    toPureArrayBuffer(ciphertextBytes)
   );
 
   console.log("[claim][debug] decrypted type:", typeof decrypted);
   console.log("[claim][debug] is ArrayBuffer:", decrypted instanceof ArrayBuffer);
   
-  if (!(decrypted instanceof ArrayBuffer) && !(decrypted instanceof Uint8Array)) {
-    throw new Error("Decryption did not return ArrayBuffer or Uint8Array");
+  if (!(decrypted instanceof ArrayBuffer)) {
+    throw new Error("Decryption did not return ArrayBuffer");
   }
 
   return new TextDecoder("utf-8").decode(decrypted);
